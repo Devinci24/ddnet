@@ -139,6 +139,9 @@ class CGameContext : public IGameServer
 	static void ConchainSettingUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConDumpLog(IConsole::IResult *pResult, void *pUserData);
 
+	//my changes
+	static void ConRestartCup(IConsole::IResult *pResult, void *pUserData);
+
 	void Construct(int Resetting);
 	void Destruct(int Resetting);
 	void AddVote(const char *pDescription, const char *pCommand);

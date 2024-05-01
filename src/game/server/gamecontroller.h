@@ -51,7 +51,6 @@ protected:
 
 	float EvaluateSpawnPos(CSpawnEval *pEval, vec2 Pos, int DDTeam);
 	void EvaluateSpawnType(CSpawnEval *pEval, int Type, int DDTeam);
-
 	void ResetGame();
 
 	char m_aMapWish[MAX_MAP_LENGTH];
@@ -59,8 +58,8 @@ protected:
 	int m_RoundStartTick;
 	int m_GameOverTick;
 	int m_SuddenDeath;
-
 	int m_Warmup;
+
 	int m_RoundCount;
 
 	int m_GameFlags;
@@ -68,6 +67,7 @@ protected:
 	bool m_ForceBalanced;
 
 public:
+
 	const char *m_pGameType;
 
 	IGameController(class CGameContext *pGameServer);
@@ -116,10 +116,10 @@ public:
 	virtual void OnReset();
 
 	// game
-	void DoWarmup(int Seconds);
+	virtual void DoWarmup(int Seconds);
 
-	void StartRound();
-	void EndRound();
+	virtual void StartRound();
+	virtual void EndRound();
 	void ChangeMap(const char *pToMap);
 
 	bool IsForceBalanced();
