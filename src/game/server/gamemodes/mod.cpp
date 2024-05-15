@@ -116,6 +116,8 @@ void CGameControllerCup::m_fnPauseServer()
 	GameServer()->Tuning()->Set("air_control_speed", 0);
 	GameServer()->Tuning()->Set("ground_jump_impulse", 0);
 	GameServer()->Tuning()->Set("air_jump_impulse", 0);
+	GameServer()->Tuning()->Set("gravity", 0);
+	GameServer()->Tuning()->Set("player_collision", 0);
 	GameServer()->SendTuningParams(-1);
 	m_TunesOn = true;
 }
@@ -435,6 +437,9 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 		Teams().OnCharacterStart(ClientId);
 		pChr->m_LastTimeCp = -1;
 		pChr->m_LastTimeCpBroadcasted = -1;
+		if (m_RoundStarted)
+			pChr->m_StartTime = m_RoundStartTick;
+
 		for(float &CurrentTimeCp : pChr->m_aCurrentTimeCp)
 		{
 			CurrentTimeCp = 0.0f;
@@ -460,7 +465,7 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 			}
 			
 		}
-		float Time = (float)(Server()->Tick() - Teams().GetStartTime(pPlayer)) / ((float)Server()->TickSpeed());
+		float Time = (float)(Server()->Tick() - m_RoundStartTick);//Teams().GetStartTime(pPlayer)) / ((float)Server()->TickSpeed());
 		if (!m_RoundStarted)
 		{
 			if (!m_fnDoesElementExist(ClientId))
