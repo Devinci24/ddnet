@@ -18,7 +18,8 @@
 #define TEST_TYPE_NAME "TestCup"
 #define WU_TIMER 60
 #define START_ROUND_TIMER 3
-#define END_ROUND_TIMER 15
+#define END_ROUND_TIMER 20
+#define BROADCAST_TIME 6
 
 #include <unistd.h>
 
@@ -34,6 +35,8 @@ CGameControllerCup::CGameControllerCup(class CGameContext *pGameServer) :
 	m_NumberOfPlayerLeft = -1;
 	m_StopAll = false;
 	m_TunesOn = false;
+	m_Warmup = -1;
+	m_lastScoreBroadcast = -1;
 }
 
 CGameControllerCup::~CGameControllerCup() = default;
@@ -47,12 +50,24 @@ void CGameControllerCup::m_fnRestartCup()
 	m_NumberOfPlayerLeft = -1;
 	m_StopAll = false;
 	m_TunesOn = false;
+	m_Warmup = -1;
 	ResetGame();
 }
 
 void CGameControllerCup::m_fnStartRoundTimer(int Seconds)
 {
-	ResetGame();
+	for(int ClientId = 0; ClientId < Server()->MaxClients(); ClientId++)
+	{
+		if(Server()->ClientIngame(ClientId))
+		{
+			CPlayer *pPlayer = Teams().GetPlayer(ClientId);
+			pPlayer->m_LastKill = Server()->Tick();
+			pPlayer->KillCharacter(WEAPON_SELF);
+			pPlayer->Respawn();
+		}
+	}
+
+	ResetGame(); //This does not "kill" the players. So they can't start again. That's why we need to kill them manually just before.
 	DoWarmup(Seconds);
 	m_RoundStarted = true;
 }
@@ -107,10 +122,18 @@ void CGameControllerCup::m_fnPauseServer()
 
 void CGameControllerCup::Tick()
 {
+	//end broadcast
+	if (m_lastScoreBroadcast != -1 && (m_lastScoreBroadcast + BROADCAST_TIME * Server()->TickSpeed()) - Server()->Tick() <= 0 && !m_StopAll)
+	{
+		GameServer()->SendBroadcast("", -1);
+		m_lastScoreBroadcast = -1;
+	}
+	//do warmup
 	if (m_Warmup <= 0 && !m_RoundStarted && m_IsFirstRound) DoWarmup(WU_TIMER);
-	if (m_Warmup && m_RoundStarted && m_TunesOn && m_FirstFinisherTick == -1)
+	//pauseServer
+	if (m_Warmup > 0 && m_RoundStarted && m_FirstFinisherTick == -1 && m_TunesOn == false)
 		m_fnPauseServer();
-	else if (!m_Warmup && m_TunesOn == true)
+	else if (m_Warmup <= 0 && m_TunesOn == true)
 	{
 		GameServer()->ResetTuning();
 		m_TunesOn = false;
@@ -123,8 +146,11 @@ void CGameControllerCup::Tick()
 			if(Server()->ClientIngame(ClientId))
 			{
 				CPlayer *pPlayer = Teams().GetPlayer(ClientId);
-				if (pPlayer->m_Score.has_value() || !m_fnDoesElementExist(ClientId))
+				if (pPlayer->GetTeam() != TEAM_SPECTATORS && (pPlayer->m_Score.has_value() || !m_fnDoesElementExist(ClientId)))
+				{
+					pPlayer->SetPreviousTeam(pPlayer->GetTeam());
 					pPlayer->SetTeam(TEAM_SPECTATORS);
+				}
 			}
 		}
 	}
@@ -176,6 +202,7 @@ void CGameControllerCup::OnPlayerConnect(CPlayer *pPlayer)
 
 	// init the player
 	Score()->PlayerData(ClientId)->Reset();
+	pPlayer->SetPreviousTeam(TEAM_FLOCK);
 
 	if(!Server()->ClientPrevIngame(ClientId))
 	{
@@ -192,12 +219,71 @@ void CGameControllerCup::DoWarmup(int Seconds)
 	IGameController::DoWarmup(Seconds);
 }
 
+char *reallocAndAppend(char *dst, char *src)
+{
+	int newSize = strlen(dst) + strlen(src) + 1;
+	dst = (char *)realloc(dst, newSize);
+    if (dst == NULL) {
+		log_error("Server", "Memory allocation failed");
+		return src;
+    }
+	str_append(dst, src, newSize);
+	return dst;
+}
+
+// char *doPrettyEliminationMessage(char *pBuf)
+// {
+// 	int longestLineLen = 0;
+// 	int currLineLen = 0;
+// 	int i = 0;
+
+// 	while (pBuf[i])
+// 	{
+// 		i++;
+// 		currLineLen++;
+// 		if (pBuf[i] == '\n')
+// 		{
+// 			if (currLineLen > longestLineLen)
+// 				longestLineLen = currLineLen;
+// 			currLineLen = 0;
+// 		}
+// 	}
+
+// 	i=0;
+// 	char *pFirstLine = (char *)malloc(longestLineLen + 2);
+// 	while (longestLineLen - i != 0)
+// 	{
+// 		pFirstLine[i] = 'm';
+// 		i++;
+// 	}
+
+// 	pFirstLine[i + 1] = '\0';
+// 	char *plastLine = strdup(pFirstLine);
+// 	pFirstLine[i] = '\n';
+// 	char *pfinalMsg = reallocAndAppend(pFirstLine, pBuf);
+// 	pfinalMsg = reallocAndAppend(pfinalMsg, plastLine);
+
+// 	free(pFirstLine);
+// 	free(plastLine);
+
+// 	return pfinalMsg;
+// }
+
 void CGameControllerCup::m_fnRemoveEliminatedPlayers()
 {
+	m_lastScoreBroadcast = Server()->Tick(); //maybe should put it lower
 
 	if (m_IsFirstRound)
 	{
 		m_IsFirstRound = false;
+		if (m_RoundScores.size() == 1)
+		{
+			char aBuf[256];
+			str_format(aBuf, sizeof(aBuf), "--------------------------------\n|    %s beat NO ONE and won!    |\n--------------------------------", Server()->ClientName(m_RoundScores[0].first));
+			GameServer()->SendBroadcast(aBuf, -1);
+			m_StopAll = true;
+			return ;
+		}
 	// 	char aBuf[32];
 	// 	str_format(aBuf, sizeof(aBuf), "No Eliminations this Round");
 	// 	GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
@@ -206,9 +292,9 @@ void CGameControllerCup::m_fnRemoveEliminatedPlayers()
 
 	int AmountOfPlayersToRemove;
 
-	if (m_NumberOfPlayerLeft > 12)
+	if (m_NumberOfPlayerLeft > 20)
 		AmountOfPlayersToRemove = 4;
-	else if (m_NumberOfPlayerLeft > 5)
+	else if (m_NumberOfPlayerLeft > 8)
 		AmountOfPlayersToRemove = 2;
 	else
 		AmountOfPlayersToRemove = 1;
@@ -217,34 +303,31 @@ void CGameControllerCup::m_fnRemoveEliminatedPlayers()
 		return left.second < right.second;
 	});
 	
+	char *pBuf = strdup("\n\n\n");
 	for (auto it = m_RoundScores.end() - 1; it != m_RoundScores.begin() - 1; --it)
 	{
-		char aBuf[64];
+		char eliminatedPlayer[128] = "";
 
-		if (it->second == 999999.0f)
+		//remove people who did not finish or too late
+		if (it->second == 999999.0f || !(m_NumberOfPlayerLeft - (int)m_RoundScores.size() >= AmountOfPlayersToRemove))
 		{
 			it = m_RoundScores.erase(it);
-			str_format(aBuf, sizeof(aBuf), "%s has been eliminated", Server()->ClientName(it->first));
-			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-			continue ;
+			str_format(eliminatedPlayer, sizeof(eliminatedPlayer), "|  %-15s has been eliminated  |\n\n", Server()->ClientName(it->first));
+			pBuf = reallocAndAppend(pBuf, eliminatedPlayer);
 		}
-
-		if (m_NumberOfPlayerLeft - (int)m_RoundScores.size() >= AmountOfPlayersToRemove)
-			break;
 		else
-		{
-			it = m_RoundScores.erase(it);
-			str_format(aBuf, sizeof(aBuf), "%s has been eliminated", Server()->ClientName(it->first));
-			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-		}
+			break;
 	}
+
+	GameServer()->SendBroadcast(pBuf, -1);
+	free(pBuf);
 
 	m_NumberOfPlayerLeft = m_RoundScores.size();
 	if (m_NumberOfPlayerLeft == 1)
 	{
-		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), "%s is the winner!", Server()->ClientName(m_RoundScores[0].first));
-		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+		char aWinnerMsg[512];
+		str_format(aWinnerMsg, sizeof(aWinnerMsg), "--------------------------------\n|    %s is the winner!    |\n--------------------------------", Server()->ClientName(m_RoundScores[0].first));
+		GameServer()->SendBroadcast(aWinnerMsg, -1);
 		m_StopAll = true;
 	}
 }
@@ -261,10 +344,13 @@ void CGameControllerCup::EndRound()
 		if(Server()->ClientIngame(ClientId))
 		{
 			CPlayer *pPlayer = Teams().GetPlayer(ClientId);
-			if (pPlayer->GetTeam() == TEAM_SPECTATORS && m_fnDoesElementExist(ClientId))
-				pPlayer->SetTeam(TEAM_FLOCK);
-			else if (pPlayer->GetTeam() == TEAM_FLOCK && !m_fnDoesElementExist(ClientId))
+			if ((pPlayer->GetTeam() == TEAM_SPECTATORS && m_fnDoesElementExist(ClientId)) || m_StopAll)
+				pPlayer->SetTeam(pPlayer->GetPreviousTeam()); //go back to previous team
+			else if (pPlayer->GetTeam() != TEAM_SPECTATORS)// && !m_fnDoesElementExist(ClientId))
+			{
+				pPlayer->SetPreviousTeam(pPlayer->GetTeam());
 				pPlayer->SetTeam(TEAM_SPECTATORS);
+			}
 		}
 	}
 	if (!m_StopAll)
@@ -277,7 +363,7 @@ void CGameControllerCup::StartRound()
 	m_SomeoneHasFinished = false;
 	m_RoundStarted = true;
 	m_RoundStartTick = Server()->Tick() + START_ROUND_TIMER * SERVER_TICK_SPEED;
-	m_GameOverTick = -1;
+	// m_GameOverTick = -1;
 
 	if (m_IsFirstRound)
 		m_NumberOfPlayerLeft = m_RoundScores.size();
@@ -364,6 +450,7 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 		{
 			if (!m_SomeoneHasFinished)
 			{
+				m_SomeoneHasFinished = true;
 				m_FirstFinisherTick = Server()->Tick();
 				DoWarmup(END_ROUND_TIMER);
 				char aBuf[128];
@@ -375,7 +462,10 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 		}
 		float Time = (float)(Server()->Tick() - Teams().GetStartTime(pPlayer)) / ((float)Server()->TickSpeed());
 		if (!m_RoundStarted)
-			m_RoundScores.emplace_back(ClientId, Time);
+		{
+			if (!m_fnDoesElementExist(ClientId))
+				m_RoundScores.emplace_back(ClientId, Time);
+		}
 		else
 		{
 			int index = m_fnGetIndexOfElement(ClientId);

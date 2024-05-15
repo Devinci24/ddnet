@@ -44,6 +44,10 @@ public:
 	CCharacter *ForceSpawn(vec2 Pos); // required for loading savegames
 	void SetTeam(int Team, bool DoChatMsg = true);
 	int GetTeam() const { return m_Team; }
+	//my changes
+	void SetPreviousTeam(int previousTeam) { m_previousTeam = previousTeam; }
+	int GetPreviousTeam() const { return m_previousTeam; }
+
 	int GetCid() const { return m_ClientId; }
 	uint32_t GetUniqueCid() const { return m_UniqueClientId; }
 	int GetClientVersion() const;
@@ -142,6 +146,8 @@ private:
 	bool m_WeakHookSpawn;
 	int m_ClientId;
 	int m_Team;
+	//my changes
+	int m_previousTeam;
 
 	int m_Paused;
 	int64_t m_ForcePauseTime;

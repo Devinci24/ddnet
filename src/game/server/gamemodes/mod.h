@@ -17,6 +17,7 @@ private:
 	bool m_IsFirstRound;
 	int m_FirstFinisherTick;
 	int m_NumberOfPlayerLeft;
+	int64_t m_lastScoreBroadcast;
 
 	void m_fnSendTimeLeftWarmupMsg();
 	void m_fnPauseServer();
