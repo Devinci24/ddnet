@@ -90,9 +90,11 @@ void CGameControllerCup::m_fnStartRoundTimer(int Seconds)
 		if(Server()->ClientIngame(ClientId))
 		{
 			CPlayer *pPlayer = Teams().GetPlayer(ClientId);
+			pPlayer->SetPreviousTeam(GameServer()->GetDDRaceTeam(ClientId));
 			pPlayer->m_LastKill = Server()->Tick();
 			pPlayer->KillCharacter(WEAPON_SELF);
 			pPlayer->Respawn();
+			pPlayer->SetTeam(pPlayer->GetPreviousTeam());
 		}
 	}
 
