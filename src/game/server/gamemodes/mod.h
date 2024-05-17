@@ -27,7 +27,9 @@ private:
 	void m_fnRemoveEliminatedPlayers();
 	bool m_fnDoesElementExist(const int ClientId);
 	int m_fnGetIndexOfElement(const int ClientId);
+	int m_fnGetId(int ClientId);
 
+	std::set<int> GetPlayersIdOnTeam(int teamId);
 public:
 
 	std::vector<std::pair<int, float>> m_RoundScores;
@@ -46,5 +48,7 @@ public:
 	void HandleCharacterTiles(class CCharacter *pChr, int MapIndex) override;
 	void Snap(int SnappingClient) override;
 	void DoWarmup(int Seconds) override;
+
+	bool GetRoundStarted() const override;
 };
 #endif // GAME_SERVER_GAMEMODES_MOD_H

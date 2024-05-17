@@ -982,6 +982,16 @@ void CGameContext::AttemptJoinTeam(int ClientId, int Team)
 	if(!pPlayer)
 		return;
 
+	//my changes
+	if (m_pController->GetRoundStarted())
+	{
+		Console()->Print(
+			IConsole::OUTPUT_LEVEL_STANDARD,
+			"chatresp",
+			"COTW has started! You can't change yout team while the game is in process.");
+		return;	
+	}
+
 	if(m_VoteCloseTime && m_VoteCreator == ClientId && (IsKickVote() || IsSpecVote()))
 	{
 		Console()->Print(
