@@ -16,7 +16,7 @@
 
 #define GAME_TYPE_NAME "Cup"
 #define TEST_TYPE_NAME "TestCup"
-#define WU_TIMER 60
+#define WU_TIMER 15
 #define START_ROUND_TIMER 3
 #define END_ROUND_TIMER 20
 #define BROADCAST_TIME 6
@@ -70,6 +70,8 @@ void CGameControllerCup::m_fnStartRoundTimer(int Seconds)
 	ResetGame(); //This does not "kill" the players. So they can't start again. That's why we need to kill them manually just before.
 	DoWarmup(Seconds);
 	m_RoundStarted = true;
+
+	m_fnPauseServer();
 }
 
 bool CGameControllerCup::m_fnDoesElementExist(const int ClientId)
@@ -105,7 +107,10 @@ void CGameControllerCup::m_fnSendTimeLeftWarmupMsg()
 	char aBuf[64];
 	int Seconds = m_Warmup / SERVER_TICK_SPEED;
 
-	str_format(aBuf, sizeof(aBuf), "%d seconds of warmup left", Seconds);
+	if (m_Warmup == 60)
+		str_format(aBuf, sizeof(aBuf), "Qualifications have started. You have %d secondes left to qualify and make it to the elimination rounds!", Seconds);
+	else
+		str_format(aBuf, sizeof(aBuf), "%d seconds of qualifications left", Seconds);
 	GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 }
 
@@ -132,23 +137,32 @@ void CGameControllerCup::Tick()
 	}
 	//do warmup
 	if (m_Warmup <= 0 && !m_RoundStarted && m_IsFirstRound) DoWarmup(WU_TIMER);
-	//pauseServer
-	if (m_Warmup > 0 && m_RoundStarted && m_FirstFinisherTick == -1 && m_TunesOn == false)
-		m_fnPauseServer();
-	else if (m_Warmup <= 0 && m_TunesOn == true)
+	//unpause Server	
+	if (m_Warmup <= 0 && m_TunesOn == true)
 	{
 		GameServer()->ResetTuning();
 		m_TunesOn = false;
 	}
 
-	if (m_RoundStarted)
+	if (m_FirstFinisherTick != -1 && (m_FirstFinisherTick + END_ROUND_TIMER * SERVER_TICK_SPEED <= Server()->Tick()
+		|| m_finishedPlayers.size() == m_RoundScores.size()))
+		EndRound();
+
+	//make sure finished players keep being on spec
+	if (!m_StopAll)
 	{
 		for(int ClientId = 0; ClientId < Server()->MaxClients(); ClientId++)
 		{
 			if(Server()->ClientIngame(ClientId))
 			{
 				CPlayer *pPlayer = Teams().GetPlayer(ClientId);
-				if (pPlayer->GetTeam() != TEAM_SPECTATORS && (pPlayer->m_Score.has_value() || !m_fnDoesElementExist(ClientId)))
+				if (!pPlayer)
+					continue ;
+				//spec
+				if (pPlayer->GetCharacter() && !pPlayer->GetCharacter()->IsPaused() && m_RoundStarted && pPlayer->m_Score.has_value())
+					pPlayer->GetCharacter()->Pause(true);
+				//spectator team
+				if (pPlayer->GetTeam() != TEAM_SPECTATORS && m_RoundStarted && !m_fnDoesElementExist(ClientId))
 				{
 					pPlayer->SetPreviousTeam(pPlayer->GetTeam());
 					pPlayer->SetTeam(TEAM_SPECTATORS);
@@ -156,10 +170,6 @@ void CGameControllerCup::Tick()
 			}
 		}
 	}
-
-
-	if (m_FirstFinisherTick != -1 && m_FirstFinisherTick + END_ROUND_TIMER * SERVER_TICK_SPEED <= Server()->Tick())
-		EndRound();
 
 	// do warmup
 	if(m_Warmup)
@@ -204,7 +214,7 @@ void CGameControllerCup::OnPlayerConnect(CPlayer *pPlayer)
 
 	// init the player
 	Score()->PlayerData(ClientId)->Reset();
-	pPlayer->SetPreviousTeam(TEAM_FLOCK);
+	pPlayer->SetPreviousTeam(pPlayer->GetTeam());
 
 	if(!Server()->ClientPrevIngame(ClientId))
 	{
@@ -294,9 +304,9 @@ void CGameControllerCup::m_fnRemoveEliminatedPlayers()
 
 	int AmountOfPlayersToRemove;
 
-	if (m_NumberOfPlayerLeft > 20)
+	if (m_NumberOfPlayerLeft > 200)//20?
 		AmountOfPlayersToRemove = 4;
-	else if (m_NumberOfPlayerLeft > 8)
+	else if (m_NumberOfPlayerLeft > 80)//8?
 		AmountOfPlayersToRemove = 2;
 	else
 		AmountOfPlayersToRemove = 1;
@@ -314,7 +324,7 @@ void CGameControllerCup::m_fnRemoveEliminatedPlayers()
 		if (it->second == 999999.0f || !(m_NumberOfPlayerLeft - (int)m_RoundScores.size() >= AmountOfPlayersToRemove))
 		{
 			it = m_RoundScores.erase(it);
-			str_format(eliminatedPlayer, sizeof(eliminatedPlayer), "|  %-15s has been eliminated  |\n\n", Server()->ClientName(it->first));
+			str_format(eliminatedPlayer, sizeof(eliminatedPlayer), " %s has been eliminated\n\n ", Server()->ClientName(it->first));
 			pBuf = reallocAndAppend(pBuf, eliminatedPlayer);
 		}
 		else
@@ -336,8 +346,9 @@ void CGameControllerCup::m_fnRemoveEliminatedPlayers()
 
 void CGameControllerCup::EndRound()
 {
-	m_RoundStarted = false;
 	m_FirstFinisherTick = -1;
+	m_SomeoneHasFinished = false;
+	m_finishedPlayers.clear();
 
 	m_fnRemoveEliminatedPlayers();
 
@@ -346,26 +357,33 @@ void CGameControllerCup::EndRound()
 		if(Server()->ClientIngame(ClientId))
 		{
 			CPlayer *pPlayer = Teams().GetPlayer(ClientId);
-			if ((pPlayer->GetTeam() == TEAM_SPECTATORS && m_fnDoesElementExist(ClientId)) || m_StopAll)
-				pPlayer->SetTeam(pPlayer->GetPreviousTeam()); //go back to previous team
-			else if (pPlayer->GetTeam() != TEAM_SPECTATORS)// && !m_fnDoesElementExist(ClientId))
+
+			//put player in spec if eliminated
+			if (!m_fnDoesElementExist(ClientId) && pPlayer->GetTeam() != TEAM_SPECTATORS)
 			{
 				pPlayer->SetPreviousTeam(pPlayer->GetTeam());
 				pPlayer->SetTeam(TEAM_SPECTATORS);
 			}
+
+			//unpause and unspec player
+			if (pPlayer->GetCharacter() && (pPlayer->GetCharacter()->IsPaused() || m_StopAll))
+				pPlayer->GetCharacter()->Pause(false);
+			if (pPlayer->GetTeam() == TEAM_SPECTATORS && m_StopAll)
+				pPlayer->SetTeam(pPlayer->GetPreviousTeam());
 		}
 	}
 	if (!m_StopAll)
 		StartRound();
+	else
+		m_RoundStarted = false;
 }
 
 void CGameControllerCup::StartRound()
 {
 	m_fnStartRoundTimer(START_ROUND_TIMER);
-	m_SomeoneHasFinished = false;
+
 	m_RoundStarted = true;
 	m_RoundStartTick = Server()->Tick() + START_ROUND_TIMER * SERVER_TICK_SPEED;
-	// m_GameOverTick = -1;
 
 	if (m_IsFirstRound)
 		m_NumberOfPlayerLeft = m_RoundScores.size();
@@ -451,38 +469,35 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 	{
 		Teams().OnCharacterFinish(ClientId);
 		
-		if (m_RoundStarted)
+		if (m_RoundStarted && !m_SomeoneHasFinished)
 		{
-			if (!m_SomeoneHasFinished)
-			{
-				m_SomeoneHasFinished = true;
-				m_FirstFinisherTick = Server()->Tick();
-				DoWarmup(END_ROUND_TIMER);
-				char aBuf[128];
-		
-				str_format(aBuf, sizeof(aBuf), "%s has finished first! You have %i seconds remaining until DNF", Server()->ClientName(ClientId), END_ROUND_TIMER);
-				GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-			}
-			
+			m_SomeoneHasFinished = true;
+			m_FirstFinisherTick = Server()->Tick();
+			DoWarmup(END_ROUND_TIMER);
+			char aBuf[128];
+	
+			str_format(aBuf, sizeof(aBuf), "%s has finished first! You have %i seconds remaining until DNF", Server()->ClientName(ClientId), END_ROUND_TIMER);
+			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 		}
+
 		float Time = (float)(Server()->Tick() - m_RoundStartTick);//Teams().GetStartTime(pPlayer)) / ((float)Server()->TickSpeed());
 		if (!m_RoundStarted)
 		{
 			if (!m_fnDoesElementExist(ClientId))
 				m_RoundScores.emplace_back(ClientId, Time);
 		}
-		else
+		else if (!m_StopAll)
 		{
+			pPlayer->GetCharacter()->Pause(true);
+
 			int index = m_fnGetIndexOfElement(ClientId);
 			if (index != -1)
 			{
 				m_RoundScores[index].first = ClientId;
 				m_RoundScores[index].second = Time;
+
+				m_finishedPlayers.insert(ClientId);
 			}
-		}
-		for (auto it = m_RoundScores.end() - 1; it != m_RoundScores.begin() - 1; --it)
-		{
-			log_info("test vector", "first is %i second is %f", it->first, it->second);
 		}
 	}
 

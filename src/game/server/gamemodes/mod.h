@@ -18,6 +18,7 @@ private:
 	int m_FirstFinisherTick;
 	int m_NumberOfPlayerLeft;
 	int64_t m_lastScoreBroadcast;
+	std::set<int> m_finishedPlayers;
 
 	void m_fnSendTimeLeftWarmupMsg();
 	void m_fnPauseServer();
