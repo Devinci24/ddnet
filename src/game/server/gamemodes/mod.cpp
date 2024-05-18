@@ -62,21 +62,24 @@ void CGameControllerCup::m_fnRestartCup()
 	m_StopAll = false;
 	m_TunesOn = false;
 	m_Warmup = -1;
+
+	m_disconnectedPlayers.clear();
+	m_RoundScores.clear();
 	ResetGame();
 }
 
-int CGameControllerCup::m_fnGetId(int ClientId)
-{
-	int id;
-	const int teamId = GameServer()->GetDDRaceTeam(ClientId);
-	CPlayer *pPlayer = Teams().GetPlayer(ClientId);
+// int CGameControllerCup::m_fnGetId(int ClientId)
+// {
+// 	int id;
+// 	const int teamId = GameServer()->GetDDRaceTeam(ClientId);
+// 	CPlayer *pPlayer = Teams().GetPlayer(ClientId);
 
-	if (g_Config.m_SvTeam == SV_TEAM_MANDATORY)
-		id = teamId;
-	else
-		id = pPlayer->GetCid();
-	return id;
-}
+// 	if (g_Config.m_SvTeam == SV_TEAM_MANDATORY)
+// 		id = teamId;
+// 	else
+// 		id = pPlayer->GetCid();
+// 	return id;
+// }
 
 bool CGameControllerCup::GetRoundStarted() const
 {
@@ -90,11 +93,9 @@ void CGameControllerCup::m_fnStartRoundTimer(int Seconds)
 		if(Server()->ClientIngame(ClientId))
 		{
 			CPlayer *pPlayer = Teams().GetPlayer(ClientId);
-			pPlayer->SetPreviousTeam(GameServer()->GetDDRaceTeam(ClientId));
 			pPlayer->m_LastKill = Server()->Tick();
 			pPlayer->KillCharacter(WEAPON_SELF);
 			pPlayer->Respawn();
-			pPlayer->SetTeam(pPlayer->GetPreviousTeam());
 		}
 	}
 
@@ -135,10 +136,10 @@ void CGameControllerCup::m_fnSendTimeLeftWarmupMsg()
 		|| m_Warmup == 1* SERVER_TICK_SPEED))
 		return ;
 
-	char aBuf[64];
+	char aBuf[128];
 	int Seconds = m_Warmup / SERVER_TICK_SPEED;
 
-	if (m_Warmup == 60)
+	if (Seconds == 60)
 		str_format(aBuf, sizeof(aBuf), "Qualifications have started. You have %d secondes left to qualify and make it to the elimination rounds!", Seconds);
 	else
 		str_format(aBuf, sizeof(aBuf), "%d seconds of qualifications left", Seconds);
@@ -191,17 +192,13 @@ void CGameControllerCup::Tick()
 					continue ;
 				
 				const int teamId = GameServer()->GetDDRaceTeam(ClientId);
-				const int id = m_fnGetId(ClientId);
 
 				//spec
 				if (pPlayer->GetCharacter() && !pPlayer->GetCharacter()->IsPaused() && m_RoundStarted && pPlayer->m_Score.has_value())
 					pPlayer->GetCharacter()->Pause(true);
 				//spectator team
-				if (pPlayer->GetTeam() != TEAM_SPECTATORS && m_RoundStarted && !m_fnDoesElementExist(id))
-				{
-					pPlayer->SetPreviousTeam(teamId);
+				if (pPlayer->GetTeam() != TEAM_SPECTATORS && m_RoundStarted && !m_fnDoesElementExist(teamId))
 					pPlayer->SetTeam(TEAM_SPECTATORS);
-				}
 			}
 		}
 	}
@@ -246,11 +243,9 @@ void CGameControllerCup::OnPlayerConnect(CPlayer *pPlayer)
 {
 	IGameController::OnPlayerConnect(pPlayer);
 	int ClientId = pPlayer->GetCid();
-	const int teamId = GameServer()->GetDDRaceTeam(ClientId);
 
 	// init the player
 	Score()->PlayerData(ClientId)->Reset();
-	pPlayer->SetPreviousTeam(teamId);
 
 	if(!Server()->ClientPrevIngame(ClientId))
 	{
@@ -260,6 +255,28 @@ void CGameControllerCup::OnPlayerConnect(CPlayer *pPlayer)
 
 		GameServer()->SendChatTarget(ClientId, "CupOfTheWeek. Version: " GAME_VERSION);
 	}
+
+	if (m_RoundStarted)
+	{
+		const char *clientName = Server()->ClientName(ClientId);
+		if (auto player = m_disconnectedPlayers.find(clientName); player != m_disconnectedPlayers.end())
+			Teams().SetForceCharacterTeam(ClientId, player->second);
+	}
+}
+
+void CGameControllerCup::OnPlayerDisconnect(CPlayer *pPlayer, const char *pReason)
+{
+	int ClientId = pPlayer->GetCid();
+	const int teamId = GameServer()->GetDDRaceTeam(ClientId);
+
+	IGameController::OnPlayerDisconnect(pPlayer, pReason);
+
+	if (m_RoundStarted)
+	{
+		const char *clientName = Server()->ClientName(ClientId);
+
+		m_disconnectedPlayers.insert({clientName, teamId});
+	}	
 }
 
 void CGameControllerCup::DoWarmup(int Seconds)
@@ -371,18 +388,10 @@ void CGameControllerCup::m_fnRemoveEliminatedPlayers()
 		{
 			it = m_RoundScores.erase(it);
 
-			if (g_Config.m_SvTeam == SV_TEAM_MANDATORY)
+			std::set<int> PlayersId = GetPlayersIdOnTeam(it->first);
+			for (int ClientId : PlayersId)
 			{
-				std::set<int> PlayersId = GetPlayersIdOnTeam(it->first);
-				for (int ClientId : PlayersId)
-				{
-					str_format(eliminatedPlayer, sizeof(eliminatedPlayer), " %s has been eliminated\n\n ", Server()->ClientName(ClientId));
-					pBuf = reallocAndAppend(pBuf, eliminatedPlayer);
-				}
-			}
-			else
-			{
-				str_format(eliminatedPlayer, sizeof(eliminatedPlayer), " %s has been eliminated\n\n ", Server()->ClientName(it->first));
+				str_format(eliminatedPlayer, sizeof(eliminatedPlayer), " %s has been eliminated\n\n ", Server()->ClientName(ClientId));
 				pBuf = reallocAndAppend(pBuf, eliminatedPlayer);
 			}
 		}
@@ -398,19 +407,11 @@ void CGameControllerCup::m_fnRemoveEliminatedPlayers()
 	{
 		char aWinnerMsg[256];
 		pBuf = strdup("\n\n\n");
-	
-		if (g_Config.m_SvTeam == SV_TEAM_MANDATORY)
+
+		std::set<int> PlayersId = GetPlayersIdOnTeam(m_RoundScores[0].first);
+		for (int ClientId : PlayersId)
 		{
-			std::set<int> PlayersId = GetPlayersIdOnTeam(m_RoundScores[0].first);
-			for (int ClientId : PlayersId)
-			{
-				str_format(aWinnerMsg, sizeof(aWinnerMsg), "--------------------------------\n|    %s is the winner!    |\n--------------------------------", Server()->ClientName(ClientId));
-				pBuf = reallocAndAppend(pBuf, aWinnerMsg);
-			}
-		}
-		else
-		{
-			str_format(aWinnerMsg, sizeof(aWinnerMsg), "--------------------------------\n|    %s is the winner!    |\n--------------------------------", Server()->ClientName(m_RoundScores[0].first));
+			str_format(aWinnerMsg, sizeof(aWinnerMsg), "--------------------------------\n|    %s won!!    |\n--------------------------------\n\n", Server()->ClientName(ClientId));
 			pBuf = reallocAndAppend(pBuf, aWinnerMsg);
 		}
 
@@ -433,21 +434,15 @@ void CGameControllerCup::EndRound()
 		if(Server()->ClientIngame(ClientId))
 		{
 			CPlayer *pPlayer = Teams().GetPlayer(ClientId);
-			const int teamId = GameServer()->GetDDRaceTeam(ClientId);
-			const int id = m_fnGetId(ClientId);
-
-			//put player in spec if eliminated
-			if (!m_fnDoesElementExist(id) && pPlayer->GetTeam() != TEAM_SPECTATORS)
-			{
-				pPlayer->SetPreviousTeam(teamId);
-				pPlayer->SetTeam(TEAM_SPECTATORS);
-			}
 
 			//unpause and unspec player
-			if (pPlayer->GetCharacter() && (pPlayer->GetCharacter()->IsPaused() || m_StopAll))
+			if (pPlayer->GetCharacter() && pPlayer->GetCharacter()->IsPaused())
 				pPlayer->GetCharacter()->Pause(false);
 			if (pPlayer->GetTeam() == TEAM_SPECTATORS && m_StopAll)
-				pPlayer->SetTeam(pPlayer->GetPreviousTeam());
+				pPlayer->SetTeam(0);
+
+			if (m_StopAll)
+				Score()->LoadPlayerData(ClientId);
 		}
 	}
 	if (!m_StopAll)
@@ -492,7 +487,7 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 {
 	CPlayer *pPlayer = pChr->GetPlayer();
 	const int ClientId = pPlayer->GetCid();
-	const int id = m_fnGetId(ClientId);
+	const int teamId = GameServer()->GetDDRaceTeam(ClientId);
 
 	int m_TileIndex = GameServer()->Collision()->GetTileIndex(MapIndex);
 	int m_TileFIndex = GameServer()->Collision()->GetFTileIndex(MapIndex);
@@ -565,18 +560,22 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 		float Time = (float)(Server()->Tick() - m_RoundStartTick);//Teams().GetStartTime(pPlayer)) / ((float)Server()->TickSpeed());
 		if (!m_RoundStarted)
 		{
-			if (!m_fnDoesElementExist(id))
-				m_RoundScores.emplace_back(id, Time);
+			if (!m_fnDoesElementExist(teamId))
+			{
+				m_RoundScores.emplace_back(teamId, Time);
+			
+				Teams().SetTeamLock(teamId, true);
+			}
 		}
-		else if (pPlayer->GetCharacter() && !m_StopAll)
+		else if (pPlayer->GetCharacter() && Teams().GetTeamState(teamId) == CGameTeams::TEAMSTATE_FINISHED && !m_StopAll)
 		{
-			int index = m_fnGetIndexOfElement(id);
+			int index = m_fnGetIndexOfElement(teamId);
 			if (index != -1)
 			{
-				m_RoundScores[index].first = id;
+				m_RoundScores[index].first = teamId;
 				m_RoundScores[index].second = Time;
 
-				m_finishedPlayers.insert(id);
+				m_finishedPlayers.insert(teamId);
 			}
 		}
 	}

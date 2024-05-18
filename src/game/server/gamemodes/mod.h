@@ -19,6 +19,7 @@ private:
 	int m_NumberOfPlayerLeft;
 	int64_t m_lastScoreBroadcast;
 	std::set<int> m_finishedPlayers;
+	std::map<const char *, const int> m_disconnectedPlayers;
 
 	void m_fnSendTimeLeftWarmupMsg();
 	void m_fnPauseServer();
@@ -48,6 +49,7 @@ public:
 	void HandleCharacterTiles(class CCharacter *pChr, int MapIndex) override;
 	void Snap(int SnappingClient) override;
 	void DoWarmup(int Seconds) override;
+	void OnPlayerDisconnect(class CPlayer *pPlayer, const char *pReason) override;
 
 	bool GetRoundStarted() const override;
 };

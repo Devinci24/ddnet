@@ -44,9 +44,6 @@ public:
 	CCharacter *ForceSpawn(vec2 Pos); // required for loading savegames
 	void SetTeam(int Team, bool DoChatMsg = true);
 	int GetTeam() const { return m_Team; }
-	//my changes
-	void SetPreviousTeam(int previousTeam) { m_previousTeam = previousTeam; }
-	int GetPreviousTeam() const { return m_previousTeam; }
 
 	int GetCid() const { return m_ClientId; }
 	uint32_t GetUniqueCid() const { return m_UniqueClientId; }
