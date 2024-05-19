@@ -31,6 +31,8 @@ private:
 	int m_fnGetId(int ClientId);
 
 	std::set<int> GetPlayersIdOnTeam(int teamId);
+	void sendKillFeed(std::set<int> PlayersId, int teamId);
+
 public:
 
 	std::vector<std::pair<int, float>> m_RoundScores;

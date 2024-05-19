@@ -139,11 +139,17 @@ void CGameControllerCup::m_fnSendTimeLeftWarmupMsg()
 	char aBuf[128];
 	int Seconds = m_Warmup / SERVER_TICK_SPEED;
 
-	if (Seconds == 60)
+	if (Seconds == WU_TIMER - 1)
+	{
 		str_format(aBuf, sizeof(aBuf), "Qualifications have started. You have %d secondes left to qualify and make it to the elimination rounds!", Seconds);
+		GameServer()->SendBroadcast(aBuf, -1);
+		m_lastScoreBroadcast = Server()->Tick();
+	}
 	else
+	{
 		str_format(aBuf, sizeof(aBuf), "%d seconds of qualifications left", Seconds);
-	GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+	}
 }
 
 void CGameControllerCup::m_fnPauseServer()
@@ -256,6 +262,14 @@ void CGameControllerCup::OnPlayerConnect(CPlayer *pPlayer)
 		GameServer()->SendChatTarget(ClientId, "CupOfTheWeek. Version: " GAME_VERSION);
 	}
 
+	if (m_Warmup > 0 && !m_RoundStarted && m_IsFirstRound)
+	{
+		char aBuf[256];
+		int Seconds = m_Warmup / Server()->TickSpeed();
+		str_format(aBuf, sizeof(aBuf), "Qualifications have already started!! But don't worry, you still have %d seconds of left", Seconds);
+		GameServer()->SendChat(ClientId, CGameContext::CHAT_ALL, aBuf);
+	}
+
 	if (m_RoundStarted)
 	{
 		const char *clientName = Server()->ClientName(ClientId);
@@ -348,6 +362,27 @@ std::set<int> CGameControllerCup::GetPlayersIdOnTeam(int teamId)
 	return PlayersId;
 }
 
+void CGameControllerCup::sendKillFeed(std::set<int> PlayersId, int teamId)
+{
+	
+	if (PlayersId.size() == 1)
+	{
+		CNetMsg_Sv_KillMsg Msg = CInfoMessages::CreateInfoMsg();
+		//Msg.m_Killer = Killer;
+		Msg.m_Victim = teamId;
+		//Msg.m_Weapon = Weapon;
+		//Msg.m_ModeSpecial = ModeSpecial;
+		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, -1);
+	}
+	else
+	{
+		CNetMsg_Sv_KillMsgTeam Msg;
+		Msg.m_Team = teamId;
+		//Msg.m_First = NewStrongId;
+		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, -1);
+	}
+}
+
 void CGameControllerCup::m_fnRemoveEliminatedPlayers()
 {
 	m_lastScoreBroadcast = Server()->Tick(); //maybe should put it lower
@@ -389,6 +424,8 @@ void CGameControllerCup::m_fnRemoveEliminatedPlayers()
 			it = m_RoundScores.erase(it);
 
 			std::set<int> PlayersId = GetPlayersIdOnTeam(it->first);
+			//sendKillFeed(PlayersId, it->first);
+
 			for (int ClientId : PlayersId)
 			{
 				str_format(eliminatedPlayer, sizeof(eliminatedPlayer), " %s has been eliminated\n\n ", Server()->ClientName(ClientId));
@@ -546,14 +583,23 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 	{
 		Teams().OnCharacterFinish(ClientId);
 		
-		if (m_RoundStarted && !m_SomeoneHasFinished)
+		bool hasFinished;
+		if (g_Config.m_SvTeam == SV_TEAM_MANDATORY)
+			hasFinished = Teams().GetTeamState(teamId) == CGameTeams::TEAMSTATE_FINISHED;
+		else
+			hasFinished = true;
+
+		if (m_RoundStarted && !m_SomeoneHasFinished && hasFinished)
 		{
 			m_SomeoneHasFinished = true;
 			m_FirstFinisherTick = Server()->Tick();
 			DoWarmup(END_ROUND_TIMER);
 			char aBuf[128];
-	
-			str_format(aBuf, sizeof(aBuf), "%s has finished first! You have %i seconds remaining until DNF", Server()->ClientName(ClientId), END_ROUND_TIMER);
+
+			if (g_Config.m_SvTeam == SV_TEAM_MANDATORY)
+				str_format(aBuf, sizeof(aBuf), "%s's team has finished first! You have %i seconds remaining until DNF", Server()->ClientName(ClientId), END_ROUND_TIMER);
+			else
+				str_format(aBuf, sizeof(aBuf), "%s has finished first! You have %i seconds remaining until DNF", Server()->ClientName(ClientId), END_ROUND_TIMER);
 			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 		}
 
@@ -566,8 +612,9 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 			
 				Teams().SetTeamLock(teamId, true);
 			}
+			log_info("round not started", "%li", m_RoundScores.size());
 		}
-		else if (pPlayer->GetCharacter() && Teams().GetTeamState(teamId) == CGameTeams::TEAMSTATE_FINISHED && !m_StopAll)
+		else if (pPlayer->GetCharacter() && hasFinished && !m_StopAll)
 		{
 			int index = m_fnGetIndexOfElement(teamId);
 			if (index != -1)
@@ -576,6 +623,8 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 				m_RoundScores[index].second = Time;
 
 				m_finishedPlayers.insert(teamId);
+
+				log_info("round started", "%li", m_finishedPlayers.size());
 			}
 		}
 	}
