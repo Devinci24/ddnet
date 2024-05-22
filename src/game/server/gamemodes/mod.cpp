@@ -23,17 +23,6 @@
 
 #include <unistd.h>
 
-// void fnIterateOverPlayer(void (*f)(int id))
-// {
-// 	for(int ClientId = 0; ClientId < Server()->MaxClients(); ClientId++)
-// 	{
-// 		if(Server()->ClientIngame(ClientId))
-// 		{
-//
-// 		}
-// 	}
-// }
-
 CGameControllerCup::CGameControllerCup(class CGameContext *pGameServer) :
 	IGameController(pGameServer)
 {
@@ -68,20 +57,7 @@ void CGameControllerCup::m_fnRestartCup()
 	ResetGame();
 }
 
-// int CGameControllerCup::m_fnGetId(int ClientId)
-// {
-// 	int id;
-// 	const int teamId = GameServer()->GetDDRaceTeam(ClientId);
-// 	CPlayer *pPlayer = Teams().GetPlayer(ClientId);
-
-// 	if (g_Config.m_SvTeam == SV_TEAM_MANDATORY)
-// 		id = teamId;
-// 	else
-// 		id = pPlayer->GetCid();
-// 	return id;
-// }
-
-bool CGameControllerCup::GetRoundStarted() const
+bool CGameControllerCup::IsRoundStarted() const
 {
 	return m_RoundStarted;
 }
@@ -310,44 +286,6 @@ char *reallocAndAppend(char *dst, char *src)
 	return dst;
 }
 
-// char *doPrettyEliminationMessage(char *pBuf)
-// {
-// 	int longestLineLen = 0;
-// 	int currLineLen = 0;
-// 	int i = 0;
-
-// 	while (pBuf[i])
-// 	{
-// 		i++;
-// 		currLineLen++;
-// 		if (pBuf[i] == '\n')
-// 		{
-// 			if (currLineLen > longestLineLen)
-// 				longestLineLen = currLineLen;
-// 			currLineLen = 0;
-// 		}
-// 	}
-
-// 	i=0;
-// 	char *pFirstLine = (char *)malloc(longestLineLen + 2);
-// 	while (longestLineLen - i != 0)
-// 	{
-// 		pFirstLine[i] = 'm';
-// 		i++;
-// 	}
-
-// 	pFirstLine[i + 1] = '\0';
-// 	char *plastLine = strdup(pFirstLine);
-// 	pFirstLine[i] = '\n';
-// 	char *pfinalMsg = reallocAndAppend(pFirstLine, pBuf);
-// 	pfinalMsg = reallocAndAppend(pfinalMsg, plastLine);
-
-// 	free(pFirstLine);
-// 	free(plastLine);
-
-// 	return pfinalMsg;
-// }
-
 std::set<int> CGameControllerCup::GetPlayersIdOnTeam(int teamId)
 {
 	std::set<int> PlayersId;
@@ -367,10 +305,10 @@ void CGameControllerCup::sendKillFeed(std::set<int> PlayersId, int teamId)
 	
 	if (PlayersId.size() == 1)
 	{
-		CNetMsg_Sv_KillMsg Msg = CInfoMessages::CreateInfoMsg();
-		//Msg.m_Killer = Killer;
+		CNetMsg_Sv_KillMsg Msg; //CInfoMessages::CreateInfoMsg();
+		Msg.m_Killer = teamId;
 		Msg.m_Victim = teamId;
-		//Msg.m_Weapon = Weapon;
+		Msg.m_Weapon = -1;
 		//Msg.m_ModeSpecial = ModeSpecial;
 		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, -1);
 	}
@@ -378,7 +316,7 @@ void CGameControllerCup::sendKillFeed(std::set<int> PlayersId, int teamId)
 	{
 		CNetMsg_Sv_KillMsgTeam Msg;
 		Msg.m_Team = teamId;
-		//Msg.m_First = NewStrongId;
+		Msg.m_First = -1;
 		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, -1);
 	}
 }
@@ -424,7 +362,7 @@ void CGameControllerCup::m_fnRemoveEliminatedPlayers()
 			it = m_RoundScores.erase(it);
 
 			std::set<int> PlayersId = GetPlayersIdOnTeam(it->first);
-			//sendKillFeed(PlayersId, it->first);
+			sendKillFeed(PlayersId, it->first);
 
 			for (int ClientId : PlayersId)
 			{
@@ -519,6 +457,44 @@ void CGameControllerCup::StartRound()
 	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 }
 
+void CGameControllerCup::setSplits(CPlayer *pThisPlayer, int currentcp)
+{
+	CCharacter *pThisChr = pThisPlayer->GetCharacter();
+
+	if (currentcp < 0 || pThisChr->m_aCurrentTimeCp[currentcp])
+		return ;
+
+	pThisChr->m_aCurrentTimeCp[currentcp] = (float)(Server()->Tick() - m_RoundStartTick);
+	float closestTimecp = 999999.0f;
+	float difference;
+
+	for(int ClientId = 0; ClientId < Server()->MaxClients(); ClientId++)
+	{
+		if(Server()->ClientIngame(ClientId) && ClientId != pThisPlayer->GetCid())
+		{
+			CPlayer *pPlayer = Teams().GetPlayer(ClientId);
+			CCharacter *pchr = pPlayer->GetCharacter();
+
+			//player has not crossed the timecp YET OR player is in team spectator
+			if (pchr->m_aCurrentTimeCp[currentcp] == 0.0f || pPlayer->GetTeam() == TEAM_SPECTATORS)
+				continue ;
+
+			difference =  pThisChr->m_aCurrentTimeCp[currentcp] - pchr->m_aCurrentTimeCp[currentcp];
+			log_info("SPLITS", "closestTimecp: %f", difference);
+			if (difference > 0 && difference < closestTimecp)
+				closestTimecp = difference;
+		}
+	}
+	if (closestTimecp == 999999.0f)
+		closestTimecp = 0.0f;
+
+	pThisChr->m_TimeCpBroadcastEndTick = Server()->Tick() + Server()->TickSpeed() * 2;
+	CNetMsg_Sv_DDRaceTime Msg;
+	Msg.m_Time = (int)((Server()->Tick() - m_RoundStartTick) * 100.0f); //maybe useless idk
+	Msg.m_Finish = 0;
+	Msg.m_Check = (int)closestTimecp;
+	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, pThisPlayer->GetCid());
+}
 
 void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 {
@@ -542,6 +518,13 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 	int FTile2 = GameServer()->Collision()->GetFTileIndex(S2);
 	int FTile3 = GameServer()->Collision()->GetFTileIndex(S3);
 	int FTile4 = GameServer()->Collision()->GetFTileIndex(S4);
+
+	//splits
+	if (IsRoundStarted())
+	{
+		setSplits(pPlayer, GameServer()->Collision()->IsTimeCheckpoint(MapIndex));
+		setSplits(pPlayer, GameServer()->Collision()->IsFTimeCheckpoint(MapIndex));
+	}
 
 	const int PlayerDDRaceState = pChr->m_DDRaceState;
 	bool IsOnStartTile = (m_TileIndex == TILE_START) || (m_TileFIndex == TILE_START) || FTile1 == TILE_START || FTile2 == TILE_START || FTile3 == TILE_START || FTile4 == TILE_START || Tile1 == TILE_START || Tile2 == TILE_START || Tile3 == TILE_START || Tile4 == TILE_START;
@@ -567,15 +550,15 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 		}
 
 		Teams().OnCharacterStart(ClientId);
-		pChr->m_LastTimeCp = -1;
-		pChr->m_LastTimeCpBroadcasted = -1;
 		if (m_RoundStarted)
 			pChr->m_StartTime = m_RoundStartTick;
-
+		pChr->m_LastTimeCp = -1;
+		pChr->m_LastTimeCpBroadcasted = -1;
 		for(float &CurrentTimeCp : pChr->m_aCurrentTimeCp)
 		{
 			CurrentTimeCp = 0.0f;
 		}
+
 	}
 
 	// finish
@@ -612,7 +595,6 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 			
 				Teams().SetTeamLock(teamId, true);
 			}
-			log_info("round not started", "%li", m_RoundScores.size());
 		}
 		else if (pPlayer->GetCharacter() && hasFinished && !m_StopAll)
 		{
@@ -623,8 +605,6 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 				m_RoundScores[index].second = Time;
 
 				m_finishedPlayers.insert(teamId);
-
-				log_info("round started", "%li", m_finishedPlayers.size());
 			}
 		}
 	}

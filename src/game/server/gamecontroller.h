@@ -155,7 +155,7 @@ public:
 	std::shared_ptr<CScoreLoadBestTimeResult> m_pLoadBestTimeResult;
 
 	//my changes
-	virtual bool GetRoundStarted() const;
+	virtual bool IsRoundStarted() const;
 };
 
 #endif

@@ -983,7 +983,7 @@ void CGameContext::AttemptJoinTeam(int ClientId, int Team)
 		return;
 
 	//my changes
-	if (m_pController->GetRoundStarted())
+	if (m_pController->IsRoundStarted())
 	{
 		Console()->Print(
 			IConsole::OUTPUT_LEVEL_STANDARD,

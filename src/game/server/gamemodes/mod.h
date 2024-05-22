@@ -32,6 +32,7 @@ private:
 
 	std::set<int> GetPlayersIdOnTeam(int teamId);
 	void sendKillFeed(std::set<int> PlayersId, int teamId);
+	void setSplits(CPlayer *pThisPlayer, int currentcp);
 
 public:
 
@@ -53,6 +54,6 @@ public:
 	void DoWarmup(int Seconds) override;
 	void OnPlayerDisconnect(class CPlayer *pPlayer, const char *pReason) override;
 
-	bool GetRoundStarted() const override;
+	bool IsRoundStarted() const override;
 };
 #endif // GAME_SERVER_GAMEMODES_MOD_H

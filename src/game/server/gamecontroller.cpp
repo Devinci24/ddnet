@@ -731,7 +731,7 @@ void IGameController::DoTeamChange(CPlayer *pPlayer, int Team, bool DoChatMsg)
 	// OnPlayerInfoChange(pPlayer);
 }
 
-bool IGameController::GetRoundStarted() const
+bool IGameController::IsRoundStarted() const
 {
 	return false;
 }

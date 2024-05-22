@@ -484,11 +484,15 @@ void CGameTeams::KillTeam(int Team, int NewStrongId, int ExceptId)
 		}
 	}
 
-	// send the team kill message
-	CNetMsg_Sv_KillMsgTeam Msg;
-	Msg.m_Team = Team;
-	Msg.m_First = NewStrongId;
-	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, -1);
+	//my changes
+	if (!GameServer()->m_pController->IsRoundStarted())
+	{
+		//send the team kill message
+		CNetMsg_Sv_KillMsgTeam Msg;
+		Msg.m_Team = Team;
+		Msg.m_First = NewStrongId;
+		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, -1);
+	}
 }
 
 bool CGameTeams::TeamFinished(int Team)
