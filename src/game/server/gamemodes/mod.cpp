@@ -16,7 +16,7 @@
 
 #define GAME_TYPE_NAME "Cup"
 #define TEST_TYPE_NAME "TestCup"
-#define WU_TIMER 15
+#define WU_TIMER 60
 #define START_ROUND_TIMER 3
 #define END_ROUND_TIMER 20
 #define BROADCAST_TIME 6
@@ -476,7 +476,7 @@ void CGameControllerCup::setSplits(CPlayer *pThisPlayer, int currentcp)
 			CCharacter *pchr = pPlayer->GetCharacter();
 
 			//player has not crossed the timecp YET OR player is in team spectator
-			if (pchr->m_aCurrentTimeCp[currentcp] == 0.0f || pPlayer->GetTeam() == TEAM_SPECTATORS)
+			if (!pchr || pPlayer->GetTeam() == TEAM_SPECTATORS || pchr->m_aCurrentTimeCp[currentcp] == 0.0f)
 				continue ;
 
 			difference =  pThisChr->m_aCurrentTimeCp[currentcp] - pchr->m_aCurrentTimeCp[currentcp];
