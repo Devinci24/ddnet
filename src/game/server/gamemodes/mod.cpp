@@ -54,6 +54,7 @@ void CGameControllerCup::m_fnRestartCup()
 
 	m_disconnectedPlayers.clear();
 	m_RoundScores.clear();
+	GameServer()->ResetTuning();
 	ResetGame();
 }
 
