@@ -141,6 +141,7 @@ void CGameClient::OnConsoleInit()
 					      &m_Hud,
 					      &m_Spectator,
 					      &m_Emoticon,
+						  &m_DemoViewer, //my changes
 					      &m_InfoMessages,
 					      &m_Chat,
 					      &m_Broadcast,

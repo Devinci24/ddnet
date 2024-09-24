@@ -2399,6 +2399,8 @@ if(CLIENT)
     components/statboard.h
     components/tooltips.cpp
     components/tooltips.h
+    components/topranksviewer.cpp
+    components/topranksviewer.h
     components/voting.cpp
     components/voting.h
     gameclient.cpp
