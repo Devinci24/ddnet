@@ -98,7 +98,6 @@ class CMenus : public CComponent
 	void RandomSkin();
 
 	friend class CDemoViewer; //my changes
-
 	// menus_settings_assets.cpp
 public:
 	struct SCustomItem
