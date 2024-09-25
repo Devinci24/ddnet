@@ -132,6 +132,7 @@ void CGameClient::OnConsoleInit()
 					      &m_Ghost,
 					      &m_Players,
 					      &m_MapLayersForeground,
+						  &m_DemoViewer, //my changes
 					      &m_Particles.m_RenderExplosions,
 					      &m_NamePlates,
 					      &m_Particles.m_RenderExtra,
@@ -141,7 +142,6 @@ void CGameClient::OnConsoleInit()
 					      &m_Hud,
 					      &m_Spectator,
 					      &m_Emoticon,
-						  &m_DemoViewer, //my changes
 					      &m_InfoMessages,
 					      &m_Chat,
 					      &m_Broadcast,
@@ -163,6 +163,7 @@ void CGameClient::OnConsoleInit()
 						  &m_Motd, // for pressing esc to remove it
 						  &m_Spectator,
 						  &m_Emoticon,
+						  &m_DemoViewer, //my changes
 						  &m_Menus,
 						  &m_Controls,
 						  &m_Binds});
