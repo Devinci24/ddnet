@@ -34,7 +34,7 @@ class CDemoViewer : public CComponent
 		virtual void OnRender() override;
 		// virtual void OnRelease() override;
 		virtual bool OnCursorMove(float x, float y, IInput::ECursorType CursorType) override;
-		// virtual bool OnInput(const IInput::CEvent &Event) override;
+		virtual bool OnInput(const IInput::CEvent &Event) override;
 
 		bool IsActive() const { return m_Active; }
 };

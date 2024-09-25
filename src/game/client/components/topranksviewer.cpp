@@ -1,4 +1,3 @@
-
 #include <game/localization.h>
 #include <game/client/gameclient.h>
 #include <engine/shared/config.h>
@@ -7,7 +6,6 @@
 #include "topranksviewer.h"
 
 #define AMOUNT_RANK_DISPLAYED 5
-
 
 CDemoViewer::CDemoViewer()
 {
@@ -50,11 +48,11 @@ void CDemoViewer::renderLeaderboardBackground(CUIRect *pRect)
 void  CDemoViewer::renderTopRanksOnLeaderboard(CUIRect *pRect)
 {
     vec2 leaderboardSize = pRect->Size();
+    static CButtonContainer DemoButtons[AMOUNT_RANK_DISPLAYED];
+    static CButtonContainer GhostButtons[AMOUNT_RANK_DISPLAYED];
 
     for (int i = 0; i < AMOUNT_RANK_DISPLAYED; i++)
     {
-        CButtonContainer DemoButton;
-        CButtonContainer GhostButton;
         CUIRect Row, Demo, Ghost;
         
         pRect->HSplitTop(20.0f, &Row, pRect);
@@ -71,16 +69,16 @@ void  CDemoViewer::renderTopRanksOnLeaderboard(CUIRect *pRect)
         str_format(aBuf, sizeof(aBuf), "%d.76", i);
         Ui()->DoLabel(&Row, aBuf, 10.0f, TEXTALIGN_MR);
 
-        if(m_pClient->m_Menus.DoButton_Menu(&DemoButton, Localize("D"), 0, &Demo))
+        if(m_pClient->m_Menus.DoButton_Menu(&DemoButtons[i], Localize("D"), 0, &Demo))
             printf("%s", "DEMO!");
-        if (m_pClient->m_Menus.DoButton_Menu(&GhostButton, Localize("G"), 0, &Ghost))
+        if (m_pClient->m_Menus.DoButton_Menu(&GhostButtons[i], Localize("G"), 0, &Ghost))
             printf("%s", "GHOST!");
-
     }
 }
 
 void CDemoViewer::OnRender()
 {
+    //Ui()->StartCheck();
     //dbg_msg("log", "vec2 (%f.02, %f.02)", GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy].x, GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy].y);
     if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return ;
@@ -95,6 +93,9 @@ void CDemoViewer::OnRender()
 
     renderLeaderboardBackground(&LeaderBoardBackground);
     renderTopRanksOnLeaderboard(&LeaderBoardBackground);
+
+	//Ui()->FinishCheck();
+	//Ui()->ClearHotkeys();
 }
 
 void CDemoViewer::ConKeyLeaderboard(IConsole::IResult *pResult, void *pUserData)
@@ -119,4 +120,14 @@ bool CDemoViewer::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 	Ui()->OnCursorMove(x, y);
 
     return true;
+}
+
+bool CDemoViewer::OnInput(const IInput::CEvent &Event)
+{
+    if(Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE && IsActive())
+	{
+		m_Active = false;
+		return true;
+	}
+	return false;
 }
