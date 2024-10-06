@@ -144,7 +144,7 @@ bool CScoreWorker::LoadFastestRanks(IDbConnection *pSqlServer, const ISqlData *p
 		"GROUP BY Name "
 		"ORDER BY Time ASC "
 		"LIMIT %d OFFSET %d",
-		pSqlServer->GetPrefix(), pData->m_AmountOfRanksToDisplay, pData->m_FirstRankToDisplay);
+		pSqlServer->GetPrefix(), LEADERBOARD_DISPLAY_RANKS, pData->m_FirstRankToDisplay);
 	if(pSqlServer->PrepareStatement(aBuf, pError, ErrorSize))
 	{
 		return true;
@@ -153,16 +153,18 @@ bool CScoreWorker::LoadFastestRanks(IDbConnection *pSqlServer, const ISqlData *p
 
 	bool End;
 
-	for (int i = 0; i < 10; i++) //MY TODO change this 10 to macro
+	for (int i = 0; i < LEADERBOARD_DISPLAY_RANKS; i++)
 	{
 		if(pSqlServer->Step(&End, pError, ErrorSize))
 			return true;
 
-		//dbg_msg("log", "STARTING QUERY LOOP, end is %i", End);
 		if(!End)
 		{
-			pSqlServer->GetString(1, pResult->m_PlayerNames.at(i), sizeof(pResult->m_PlayerNames.at(i)));
-			pResult->m_PlayerTimes.at(i) = pSqlServer->GetFloat(2);
+			SLeaderboard Leaderboard;
+			pSqlServer->GetString(1, Leaderboard.m_PlayerName, sizeof(Leaderboard.m_PlayerName));
+			Leaderboard.m_PlayerTime = pSqlServer->GetFloat(2);
+
+			pResult->m_aPlayerLeaderboard[i] = Leaderboard;
 		}
 	}
 

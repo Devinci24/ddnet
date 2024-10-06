@@ -12,12 +12,16 @@
 #include <game/mapbugs.h>
 #include <game/voting.h>
 
+#include "engine/shared/protocol.h"
 #include "eventhandler.h"
 #include "gameworld.h"
 #include "teehistorian.h"
 
 #include <memory>
 #include <string>
+
+//my changes
+#include "game/server/scoreworker.h"
 
 /*
 	Tick
@@ -59,7 +63,6 @@ class IEngine;
 class IStorage;
 struct CAntibotRoundData;
 struct CScoreRandomMapResult;
-struct CScoreLoadFastestRanksResult;
 
 struct CSnapContext
 {
@@ -267,7 +270,7 @@ public:
 	void SendChat(int ClientId, int Team, const char *pText, int SpamProtectionClientId = -1, int VersionFlags = FLAG_SIX | FLAG_SIXUP);
 	void SendStartWarning(int ClientId, const char *pMessage);
 	void SendEmoticon(int ClientId, int Emoticon, int TargetClientId) const;
-	void SendLeaderboardInfo() const; //my changes
+	void SendLeaderboardInfo(); //my changes
 	void SendWeaponPickup(int ClientId, int Weapon) const;
 	void SendMotd(int ClientId) const;
 	void SendSettings(int ClientId) const;
@@ -370,7 +373,10 @@ public:
 	std::shared_ptr<CScoreRandomMapResult> m_SqlRandomMapResult;
 
 	//my changes
+	void ClearCachedLeaderboard(bool PlayerFinished, SLeaderboard Player = SLeaderboard());
+
 	std::deque<std::shared_ptr<CScoreLoadFastestRanksResult>> m_SqlTopRanks;
+	std::vector<SLeaderboard> m_CachedLeaderboard;
 
 private:
 	// starting 1 to make 0 the special value "no client id"

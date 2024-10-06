@@ -826,7 +826,7 @@ public:
 	//my changes
 	void renderLeaderboard();
 	void renderLeaderboardBackground(CUIRect *pRect);
-	void renderTopRanksOnLeaderboard(CUIRect *pRect);
+	void renderTopRanksOnLeaderboard(CUIRect *Leaderboard);
 	void renderLeaderboardFooter(CUIRect *Leaderboard, bool &doRequest);
 
 	static void ConKeyLeaderboard(IConsole::IResult *pResult, void *pUserData);
@@ -834,8 +834,13 @@ public:
 
 	bool m_LeaderboardActive;
 	int m_FirstRankToDisplay;
-	std::array<char [MAX_NAME_LENGTH], 10> m_PlayerNames; //MY TODO change the 10
-	std::array<float, 10> m_PlayerTimes; 
+	struct SLeaderboard
+	{
+		char m_PlayerName[MAX_NAME_LENGTH] = "empty\0";
+		float m_PlayerTime = 0.0f;
+	};
+
+	std::array<SLeaderboard, LEADERBOARD_DISPLAY_RANKS> m_aPlayerLeaderboard;
 
 private:
 	static int GhostlistFetchCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);

@@ -84,19 +84,20 @@ struct CSqlLoadBestTimeData : ISqlData
 };
 
 //my changes
-#define AMOUNT_RANKS_TO_LOAD 10 //MY TODO rename, move and connect macro to client
+
+struct SLeaderboard
+{
+	char m_PlayerName[MAX_NAME_LENGTH] = "empty\0";
+	float m_PlayerTime = 0.0f;
+};
+
 struct CScoreLoadFastestRanksResult : ISqlResult
 {
-    CScoreLoadFastestRanksResult() :
-		m_PlayerNames{},
-        m_PlayerTimes{0.0f}
-    {
-    }
 
-	std::array<char [MAX_NAME_LENGTH], AMOUNT_RANKS_TO_LOAD> m_PlayerNames; //MY TODO change the 256 to actual name lenght
-	std::array<float, AMOUNT_RANKS_TO_LOAD> m_PlayerTimes;
+	std::array<SLeaderboard, LEADERBOARD_DISPLAY_RANKS> m_aPlayerLeaderboard;
 	int m_TargetClient;
 	bool m_Done;
+	size_t m_FirstRankToDisplay;
 
 };
 
@@ -110,9 +111,7 @@ struct CSqlLoadFastestRanksData : ISqlData
 
 	// current map
 	char m_aMap[MAX_MAP_LENGTH];
-
 	int m_FirstRankToDisplay;
-	int m_AmountOfRanksToDisplay;
 };
 
 struct CSqlPlayerRequest : ISqlData

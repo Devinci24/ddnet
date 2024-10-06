@@ -2,8 +2,11 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "gamecontext.h"
 
+#include <utility>
 #include <vector>
 
+#include "engine/shared/protocol.h"
+#include "game/server/scoreworker.h"
 #include "teeinfo.h"
 #include <antibot/antibot_data.h>
 #include <base/logger.h>
@@ -718,20 +721,38 @@ void CGameContext::SendEmoticon(int ClientId, int Emoticon, int TargetClientId) 
 }
 
 //my changes
-void CGameContext::SendLeaderboardInfo() const
+void CGameContext::SendLeaderboardInfo()
 {
 	CNetMsg_Sv_LeaderboardInfo Msg;
-	int targetClient = m_SqlTopRanks.front()->m_TargetClient;
+	int TargetClient = m_SqlTopRanks.front()->m_TargetClient;
+	
+	int i = 0;
+	for(auto &Rank : m_SqlTopRanks.back()->m_aPlayerLeaderboard)
+	{
+		Msg.m_PlayerNames[i] = Rank.m_PlayerName;
+		Msg.m_PlayerTimes[i] = int(Rank.m_PlayerTime *= 1000);
+		i++;
 
-	std::copy(std::begin(m_SqlTopRanks.front()->m_PlayerNames), std::end(m_SqlTopRanks.front()->m_PlayerNames), std::begin(Msg.m_PlayerNames));
-	std::copy(std::begin(m_SqlTopRanks.front()->m_PlayerTimes), std::end(m_SqlTopRanks.front()->m_PlayerTimes), std::begin(Msg.m_PlayerTimes));
+		//Needs to make sure m_CachedLeaderboard is built in order and that nothing can fuck it up...
+		if (m_CachedLeaderboard.size() >=  m_SqlTopRanks.back()->m_FirstRankToDisplay // constructs only LEADERBOARD_DISPLAY_RANK from FirstRankToDisplay
+			&& m_CachedLeaderboard.size() <=  m_SqlTopRanks.back()->m_FirstRankToDisplay + LEADERBOARD_DISPLAY_RANKS
+			&& m_SqlTopRanks.back()->m_FirstRankToDisplay % LEADERBOARD_DISPLAY_RANKS == 0) //in case someone changes their client and sends unexpected number
+		{
+			SLeaderboard Player;
+			str_copy(Player.m_PlayerName, Rank.m_PlayerName);
+			Player.m_PlayerTime = Rank.m_PlayerTime;
+			m_CachedLeaderboard.emplace_back(Player);
+		}
+	}
+
+	// for (SLeaderboard item : m_CachedLeaderboard)
+	// {
+	// 	dbg_msg("leaderboard", "name: %s, time %f", item.m_PlayerName, item.m_PlayerTime);
+	// }
+	// dbg_msg("Leaderboard", "done\n\n");
+
 	m_SqlTopRanks.front()->m_Done = true;
-	//dbg_msg("log", "SENDING MESSAGE TO CLIENT: %d \n Request is : %i", m_SqlTopRanks.front()->m_TargetClient, m_SqlTopRanks.front()->m_Done );
-
-	for (int i = 0; i < 10; i++) //MY TODO change this 10
-		Msg.m_PlayerTimes[i] *= 1000; //MY TODO change this?
-
-	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, targetClient);
+	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, TargetClient);
 }
 
 void CGameContext::SendWeaponPickup(int ClientId, int Weapon) const
@@ -1309,7 +1330,7 @@ void CGameContext::OnTick()
 	}
 
 	//my changes
-	if(m_SqlTopRanks.size() > 0 && m_SqlTopRanks.front()->m_Completed)
+	if(!m_SqlTopRanks.empty() && m_SqlTopRanks.front()->m_Completed)
 	{
 		if (m_SqlTopRanks.front()->m_Success)
 			SendLeaderboardInfo();
@@ -2814,14 +2835,43 @@ void CGameContext::OnEmoticonNetMessage(const CNetMsg_Cl_Emoticon *pMsg, int Cli
 	}
 }
 
-
-//my changes MY TODO change the 10 to macro
+//my changes
 void CGameContext::OnLeaderboardNetMessage(const CNetMsg_Cl_LeaderboardInfo *pMsg, int ClientId)
 {
 	if(m_World.m_Paused)
 		return;
 
-	m_pScore->GetTopRanks(pMsg->m_FirstRankToDisplay, pMsg->m_AmountOfRanksToDisplay, ClientId);
+	m_pScore->GetTopRanks(pMsg->m_FirstRankToDisplay, ClientId);
+}
+
+void CGameContext::ClearCachedLeaderboard(bool PlayerFinished, SLeaderboard Player)
+{
+	int FirstRankToDisplay = 0;
+	if (!PlayerFinished)
+		m_CachedLeaderboard.clear();
+	else
+	{
+		auto PlayerNameIt = std::find_if(m_CachedLeaderboard.begin(), m_CachedLeaderboard.end(),
+							[&Player](SLeaderboard &Rank){
+								return Player.m_PlayerName == Rank.m_PlayerName;
+							});
+		auto PlayerTimeIt = std::find_if(m_CachedLeaderboard.begin(), m_CachedLeaderboard.end(),
+							[&Player](SLeaderboard &Rank){
+								return Player.m_PlayerTime < Rank.m_PlayerTime;
+							});
+
+		//if player improved his time
+		if (PlayerNameIt != m_CachedLeaderboard.end() && Player.m_PlayerTime < PlayerNameIt->m_PlayerTime)
+		{
+			m_CachedLeaderboard.erase(PlayerNameIt);
+			m_CachedLeaderboard.insert(PlayerTimeIt, Player);
+		}
+		if (PlayerNameIt == m_CachedLeaderboard.end() && PlayerTimeIt != m_CachedLeaderboard.end() && Player.m_PlayerTime < PlayerNameIt->m_PlayerTime) //if new player has done a time
+			m_CachedLeaderboard.insert(PlayerTimeIt, Player);
+	}
+
+	if (!PlayerFinished)
+		m_pScore->GetTopRanks(FirstRankToDisplay, -1);
 }
 
 void CGameContext::OnKillNetMessage(const CNetMsg_Cl_Kill *pMsg, int ClientId)
@@ -4186,6 +4236,10 @@ void CGameContext::OnMapChange(char *pNewMapName, int MapNameSize)
 {
 	char aConfig[IO_MAX_PATH_LENGTH];
 	str_format(aConfig, sizeof(aConfig), "maps/%s.cfg", g_Config.m_SvMap);
+
+	//my changes THIS DOESN'T WORK
+	if (!m_CachedLeaderboard.empty())
+		ClearCachedLeaderboard(false);
 
 	CLineReader LineReader;
 	if(!LineReader.OpenFile(Storage()->OpenFile(aConfig, IOFLAG_READ, IStorage::TYPE_ALL)))

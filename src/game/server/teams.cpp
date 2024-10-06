@@ -858,6 +858,12 @@ void CGameTeams::OnFinish(CPlayer *Player, int TimeTicks, const char *pTimestamp
 	// Confetti
 	CCharacter *pChar = Player->GetCharacter();
 	m_pGameContext->CreateFinishEffect(pChar->m_Pos, pChar->TeamMask());
+
+	//my changes
+	SLeaderboard LeaderboardPlayer;
+	str_copy(LeaderboardPlayer.m_PlayerName, Server()->ClientName(ClientId));
+	LeaderboardPlayer.m_PlayerTime = Time * 1000;
+	GameServer()->ClearCachedLeaderboard(true, LeaderboardPlayer);
 }
 
 void CGameTeams::RequestTeamSwap(CPlayer *pPlayer, CPlayer *pTargetPlayer, int Team)

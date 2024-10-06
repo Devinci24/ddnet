@@ -1,10 +1,12 @@
 #include "score.h"
+#include "engine/shared/protocol.h"
 #include "gamemodes/DDRace.h"
 #include "player.h"
 #include "save.h"
 #include "scoreworker.h"
 
 #include <base/system.h>
+#include <cstddef>
 #include <engine/server/databases/connection_pool.h>
 #include <engine/shared/config.h>
 #include <engine/shared/console.h>
@@ -12,6 +14,8 @@
 #include <engine/storage.h>
 #include <game/generated/wordlist.h>
 
+#include <gtest/gtest.h>
+#include <iterator>
 #include <memory>
 
 class IDbConnection;
@@ -284,7 +288,7 @@ void CScore::RandomUnfinishedMap(int ClientId, int Stars)
 }
 
 //my changes
-void CScore::GetTopRanks(int FirstRankToDisplay, int AmountOfRanksToDisplay, int ClientId)
+void CScore::GetTopRanks(int FirstRankToDisplay, int ClientId)
 {
 	auto pResult = std::make_shared<CScoreLoadFastestRanksResult>();
 	GameServer()->m_SqlTopRanks.push_back(pResult);
@@ -292,17 +296,30 @@ void CScore::GetTopRanks(int FirstRankToDisplay, int AmountOfRanksToDisplay, int
 	//initialize SqlTopRanks to default values
 	GameServer()->m_SqlTopRanks.back()->m_TargetClient = ClientId;
 	GameServer()->m_SqlTopRanks.back()->m_Done = false;
-	for (long unsigned int i = 0; i < GameServer()->m_SqlTopRanks.back()->m_PlayerNames.max_size(); i++)
-		str_copy(GameServer()->m_SqlTopRanks.back()->m_PlayerNames[i], "empty", MAX_NAME_LENGTH);
-	GameServer()->m_SqlTopRanks.back()->m_PlayerTimes.fill(0);
+	GameServer()->m_SqlTopRanks.back()->m_FirstRankToDisplay = FirstRankToDisplay;
 
-	auto Tmp = std::make_unique<CSqlLoadFastestRanksData>(pResult); //MY TODO use this firstrank and amount.
-	Tmp->m_FirstRankToDisplay = FirstRankToDisplay;
-	Tmp->m_AmountOfRanksToDisplay = AmountOfRanksToDisplay;
-	str_copy(Tmp->m_aMap, Server()->GetMapName(), sizeof(Tmp->m_aMap));
+	// dbg_msg("getTopRanks", "size is: %d, element is %s", (int)GameServer()->m_CachedLeaderboard.size(), GameServer()->m_CachedLeaderboard.front().m_PlayerName);
+	// dbg_msg("getTopRanks", "first rank is : %d", FirstRankToDisplay);
+	if ((int)GameServer()->m_CachedLeaderboard.size() >= (FirstRankToDisplay + LEADERBOARD_DISPLAY_RANKS))
+	{
+		//Use cached Leaderboard if Available
+		//auto Leaderboard = GameServer()->m_SqlTopRanks.back()->m_aPlayerLeaderboard;
+		for(int i = 0; i < LEADERBOARD_DISPLAY_RANKS; i++)
+		{
+			str_copy(GameServer()->m_SqlTopRanks.back()->m_aPlayerLeaderboard[i].m_PlayerName, GameServer()->m_CachedLeaderboard[FirstRankToDisplay + i].m_PlayerName);
+			GameServer()->m_SqlTopRanks.back()->m_aPlayerLeaderboard[i].m_PlayerTime = GameServer()->m_CachedLeaderboard[FirstRankToDisplay + i].m_PlayerTime;
+		}
+		GameServer()->m_SqlTopRanks.back()->m_Completed = true;
+		GameServer()->m_SqlTopRanks.back()->m_Success = true;
+	}
+	else
+	{
+		auto Tmp = std::make_unique<CSqlLoadFastestRanksData>(pResult);
+		Tmp->m_FirstRankToDisplay = FirstRankToDisplay;
+		str_copy(Tmp->m_aMap, Server()->GetMapName(), sizeof(Tmp->m_aMap));
 
-	m_pPool->Execute(CScoreWorker::LoadFastestRanks, std::move(Tmp), "Global Top ??");
-
+		m_pPool->Execute(CScoreWorker::LoadFastestRanks, std::move(Tmp), "Leaderboard display ranks");
+	}
 }
 
 void CScore::SaveTeam(int ClientId, const char *pCode, const char *pServer)

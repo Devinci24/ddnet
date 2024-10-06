@@ -908,7 +908,6 @@ void CGameClient::OnRelease()
 
 void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dummy)
 {
-	dbg_msg("log", "SERVER MESSAGE RECEIVED FOR LEADERBOARD, NAME RECEIVED. MSG ID: %d. We want: %d", MsgId, NETMSGTYPE_SV_LEADERBOARDINFO);
 	// special messages
 	static_assert((int)NETMSGTYPE_SV_TUNEPARAMS == (int)protocol7::NETMSGTYPE_SV_TUNEPARAMS, "0.6 and 0.7 tune message id do not match");
 	if(MsgId == NETMSGTYPE_SV_TUNEPARAMS)
@@ -992,18 +991,13 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 	{
 		CNetMsg_Sv_LeaderboardInfo *pMsg = (CNetMsg_Sv_LeaderboardInfo *)pRawMsg;
 
+		// dbg_msg("Leadeboard", "server message received");
 		// apply
-
-		for (size_t i = 0; i < m_Menus.m_PlayerTimes.max_size(); i++)
-			str_copy(m_Menus.m_PlayerNames[i], pMsg->m_PlayerNames[i], sizeof(m_Menus.m_PlayerNames[i]));
-		for (size_t i = 0; i < m_Menus.m_PlayerTimes.max_size(); i++)
-			m_Menus.m_PlayerTimes[i] = pMsg->m_PlayerTimes[i] / 1000.0f;//std::copy(std::begin(pMsg->m_PlayerTimes), std::end(pMsg->m_PlayerTimes), std::begin(m_Menus.m_PlayerTimes));
-
-		for (int i = 0; i < 10; i++)
-		{
-			dbg_msg("log", "name %d is %s", i, m_Menus.m_PlayerNames[i]);
-			dbg_msg("log", "time %d is %f", i, m_Menus.m_PlayerTimes[i]);
-		}
+		for(size_t i = 0; i < m_Menus.m_aPlayerLeaderboard.max_size(); i++)
+ 		{
+			str_copy(m_Menus.m_aPlayerLeaderboard[i].m_PlayerName, pMsg->m_PlayerNames[i], sizeof(m_Menus.m_aPlayerLeaderboard[i].m_PlayerName));
+			m_Menus.m_aPlayerLeaderboard[i].m_PlayerTime = pMsg->m_PlayerTimes[i] / 1000.0f;
+ 		}
 
 	}
 	else if(MsgId == NETMSGTYPE_SV_SOUNDGLOBAL)

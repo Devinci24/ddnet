@@ -98,9 +98,6 @@ CMenus::CMenus()
 	m_PasswordInput.SetHidden(true);
 
 	//my changes
-	for (size_t i = 0; i < m_PlayerNames.max_size(); i++)
-		str_copy(m_PlayerNames[i], "", MAX_NAME_LENGTH);
-	m_PlayerTimes.fill(0);
 	m_FirstRankToDisplay = 0;
 }
 
@@ -2165,10 +2162,14 @@ bool CMenus::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 bool CMenus::OnInput(const IInput::CEvent &Event)
 {
 	//my changes
-    if(Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE && IsLeaderboardActive())
+
+	if (Event.m_Flags & IInput::FLAG_PRESS && IsLeaderboardActive())
 	{
-		m_LeaderboardActive = false;
-		return true;
+		if (Event.m_Key == KEY_ESCAPE)
+			m_LeaderboardActive = false;
+		else if (Event.m_Key == KEY_MOUSE_1 && Ui()->HotItem())
+			return true;
+		return false;
 	}
 
 	// Escape key is always handled to activate/deactivate menu
