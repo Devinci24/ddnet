@@ -69,6 +69,9 @@ public:
 	void RandomMap(int ClientId, int Stars);
 	void RandomUnfinishedMap(int ClientId, int Stars);
 
+	//my changes
+	void GetTopRanks(int m_FirstRankToDisplay, int m_AmountOfRanksToDisplay, int ClientId);
+
 	void SaveTeam(int ClientId, const char *pCode, const char *pServer);
 	void LoadTeam(const char *pCode, int ClientId);
 	void GetSaves(int ClientId);

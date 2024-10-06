@@ -59,6 +59,7 @@ class IEngine;
 class IStorage;
 struct CAntibotRoundData;
 struct CScoreRandomMapResult;
+struct CScoreLoadFastestRanksResult;
 
 struct CSnapContext
 {
@@ -266,6 +267,7 @@ public:
 	void SendChat(int ClientId, int Team, const char *pText, int SpamProtectionClientId = -1, int VersionFlags = FLAG_SIX | FLAG_SIXUP);
 	void SendStartWarning(int ClientId, const char *pMessage);
 	void SendEmoticon(int ClientId, int Emoticon, int TargetClientId) const;
+	void SendLeaderboardInfo() const; //my changes
 	void SendWeaponPickup(int ClientId, int Weapon) const;
 	void SendMotd(int ClientId) const;
 	void SendSettings(int ClientId) const;
@@ -312,6 +314,7 @@ public:
 	void OnSetSpectatorModeNetMessage(const CNetMsg_Cl_SetSpectatorMode *pMsg, int ClientId);
 	void OnChangeInfoNetMessage(const CNetMsg_Cl_ChangeInfo *pMsg, int ClientId);
 	void OnEmoticonNetMessage(const CNetMsg_Cl_Emoticon *pMsg, int ClientId);
+	void OnLeaderboardNetMessage(const CNetMsg_Cl_LeaderboardInfo *pMsg, int ClientId); //my changes
 	void OnKillNetMessage(const CNetMsg_Cl_Kill *pMsg, int ClientId);
 	void OnStartInfoNetMessage(const CNetMsg_Cl_StartInfo *pMsg, int ClientId);
 
@@ -365,6 +368,9 @@ public:
 	void OnUpdatePlayerServerInfo(CJsonStringWriter *pJSonWriter, int Id) override;
 
 	std::shared_ptr<CScoreRandomMapResult> m_SqlRandomMapResult;
+
+	//my changes
+	std::deque<std::shared_ptr<CScoreLoadFastestRanksResult>> m_SqlTopRanks;
 
 private:
 	// starting 1 to make 0 the special value "no client id"

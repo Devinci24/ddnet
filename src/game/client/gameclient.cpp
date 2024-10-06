@@ -132,7 +132,6 @@ void CGameClient::OnConsoleInit()
 					      &m_Ghost,
 					      &m_Players,
 					      &m_MapLayersForeground,
-						  &m_DemoViewer, //my changes
 					      &m_Particles.m_RenderExplosions,
 					      &m_NamePlates,
 					      &m_Particles.m_RenderExtra,
@@ -163,7 +162,6 @@ void CGameClient::OnConsoleInit()
 						  &m_Motd, // for pressing esc to remove it
 						  &m_Spectator,
 						  &m_Emoticon,
-						  &m_DemoViewer, //my changes
 						  &m_Menus,
 						  &m_Controls,
 						  &m_Binds});
@@ -910,6 +908,7 @@ void CGameClient::OnRelease()
 
 void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dummy)
 {
+	dbg_msg("log", "SERVER MESSAGE RECEIVED FOR LEADERBOARD, NAME RECEIVED. MSG ID: %d. We want: %d", MsgId, NETMSGTYPE_SV_LEADERBOARDINFO);
 	// special messages
 	static_assert((int)NETMSGTYPE_SV_TUNEPARAMS == (int)protocol7::NETMSGTYPE_SV_TUNEPARAMS, "0.6 and 0.7 tune message id do not match");
 	if(MsgId == NETMSGTYPE_SV_TUNEPARAMS)
@@ -975,6 +974,7 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 	for(auto &pComponent : m_vpAll)
 		pComponent->OnMessage(MsgId, pRawMsg);
 
+
 	if(MsgId == NETMSGTYPE_SV_READYTOENTER)
 	{
 		Client()->EnterGame(Conn);
@@ -987,6 +987,24 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 		m_aClients[pMsg->m_ClientId].m_Emoticon = pMsg->m_Emoticon;
 		m_aClients[pMsg->m_ClientId].m_EmoticonStartTick = Client()->GameTick(Conn);
 		m_aClients[pMsg->m_ClientId].m_EmoticonStartFraction = Client()->IntraGameTickSincePrev(Conn);
+	}
+	else if(MsgId == NETMSGTYPE_SV_LEADERBOARDINFO) //my changes
+	{
+		CNetMsg_Sv_LeaderboardInfo *pMsg = (CNetMsg_Sv_LeaderboardInfo *)pRawMsg;
+
+		// apply
+
+		for (size_t i = 0; i < m_Menus.m_PlayerTimes.max_size(); i++)
+			str_copy(m_Menus.m_PlayerNames[i], pMsg->m_PlayerNames[i], sizeof(m_Menus.m_PlayerNames[i]));
+		for (size_t i = 0; i < m_Menus.m_PlayerTimes.max_size(); i++)
+			m_Menus.m_PlayerTimes[i] = pMsg->m_PlayerTimes[i] / 1000.0f;//std::copy(std::begin(pMsg->m_PlayerTimes), std::end(pMsg->m_PlayerTimes), std::begin(m_Menus.m_PlayerTimes));
+
+		for (int i = 0; i < 10; i++)
+		{
+			dbg_msg("log", "name %d is %s", i, m_Menus.m_PlayerNames[i]);
+			dbg_msg("log", "time %d is %f", i, m_Menus.m_PlayerTimes[i]);
+		}
+
 	}
 	else if(MsgId == NETMSGTYPE_SV_SOUNDGLOBAL)
 	{

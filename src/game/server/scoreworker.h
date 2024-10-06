@@ -83,6 +83,38 @@ struct CSqlLoadBestTimeData : ISqlData
 	char m_aMap[MAX_MAP_LENGTH];
 };
 
+//my changes
+#define AMOUNT_RANKS_TO_LOAD 10 //MY TODO rename, move and connect macro to client
+struct CScoreLoadFastestRanksResult : ISqlResult
+{
+    CScoreLoadFastestRanksResult() :
+		m_PlayerNames{},
+        m_PlayerTimes{0.0f}
+    {
+    }
+
+	std::array<char [MAX_NAME_LENGTH], AMOUNT_RANKS_TO_LOAD> m_PlayerNames; //MY TODO change the 256 to actual name lenght
+	std::array<float, AMOUNT_RANKS_TO_LOAD> m_PlayerTimes;
+	int m_TargetClient;
+	bool m_Done;
+
+};
+
+//my changes
+struct CSqlLoadFastestRanksData : ISqlData
+{
+	CSqlLoadFastestRanksData(std::shared_ptr<CScoreLoadFastestRanksResult> pResult) :
+		ISqlData(std::move(pResult))
+	{
+	}
+
+	// current map
+	char m_aMap[MAX_MAP_LENGTH];
+
+	int m_FirstRankToDisplay;
+	int m_AmountOfRanksToDisplay;
+};
+
 struct CSqlPlayerRequest : ISqlData
 {
 	CSqlPlayerRequest(std::shared_ptr<CScorePlayerResult> pResult) :
@@ -286,6 +318,9 @@ struct CTeamrank
 struct CScoreWorker
 {
 	static bool LoadBestTime(IDbConnection *pSqlServer, const ISqlData *pGameData, char *pError, int ErrorSize);
+
+	//my changes
+	static bool LoadFastestRanks(IDbConnection *pSqlServer, const ISqlData *pGameData, char *pError, int ErrorSize);
 
 	static bool RandomMap(IDbConnection *pSqlServer, const ISqlData *pGameData, char *pError, int ErrorSize);
 	static bool RandomUnfinishedMap(IDbConnection *pSqlServer, const ISqlData *pGameData, char *pError, int ErrorSize);

@@ -30,6 +30,9 @@
 
 #include <game/client/components/skins7.h>
 
+//my changes
+#include <game/client/ui_listbox.h>
+
 struct CServerProcess
 {
 	PROCESS m_Process;
@@ -97,7 +100,6 @@ class CMenus : public CComponent
 	bool m_SkinListNeedsUpdate = false;
 	void RandomSkin();
 
-	friend class CDemoViewer; //my changes
 	// menus_settings_assets.cpp
 public:
 	struct SCustomItem
@@ -657,6 +659,8 @@ public:
 
 	bool IsInit() { return m_IsInit; }
 
+	//my changes
+	bool IsLeaderboardActive() const { return m_LeaderboardActive; }
 	bool IsActive() const { return m_MenuActive; }
 	void KillServer();
 
@@ -818,6 +822,20 @@ public:
 		DEMOPLAYER_NONE = 0,
 		DEMOPLAYER_SLICE_SAVE,
 	};
+
+	//my changes
+	void renderLeaderboard();
+	void renderLeaderboardBackground(CUIRect *pRect);
+	void renderTopRanksOnLeaderboard(CUIRect *pRect);
+	void renderLeaderboardFooter(CUIRect *Leaderboard, bool &doRequest);
+
+	static void ConKeyLeaderboard(IConsole::IResult *pResult, void *pUserData);
+	void getLeaderboardInfo(void);
+
+	bool m_LeaderboardActive;
+	int m_FirstRankToDisplay;
+	std::array<char [MAX_NAME_LENGTH], 10> m_PlayerNames; //MY TODO change the 10
+	std::array<float, 10> m_PlayerTimes; 
 
 private:
 	static int GhostlistFetchCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);

@@ -717,6 +717,23 @@ void CGameContext::SendEmoticon(int ClientId, int Emoticon, int TargetClientId) 
 	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, TargetClientId);
 }
 
+//my changes
+void CGameContext::SendLeaderboardInfo() const
+{
+	CNetMsg_Sv_LeaderboardInfo Msg;
+	int targetClient = m_SqlTopRanks.front()->m_TargetClient;
+
+	std::copy(std::begin(m_SqlTopRanks.front()->m_PlayerNames), std::end(m_SqlTopRanks.front()->m_PlayerNames), std::begin(Msg.m_PlayerNames));
+	std::copy(std::begin(m_SqlTopRanks.front()->m_PlayerTimes), std::end(m_SqlTopRanks.front()->m_PlayerTimes), std::begin(Msg.m_PlayerTimes));
+	m_SqlTopRanks.front()->m_Done = true;
+	//dbg_msg("log", "SENDING MESSAGE TO CLIENT: %d \n Request is : %i", m_SqlTopRanks.front()->m_TargetClient, m_SqlTopRanks.front()->m_Done );
+
+	for (int i = 0; i < 10; i++) //MY TODO change this 10
+		Msg.m_PlayerTimes[i] *= 1000; //MY TODO change this?
+
+	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, targetClient);
+}
+
 void CGameContext::SendWeaponPickup(int ClientId, int Weapon) const
 {
 	CNetMsg_Sv_WeaponPickup Msg;
@@ -1289,6 +1306,15 @@ void CGameContext::OnTick()
 				m_LastMapVote = 0;
 		}
 		m_SqlRandomMapResult = nullptr;
+	}
+
+	//my changes
+	if(m_SqlTopRanks.size() > 0 && m_SqlTopRanks.front()->m_Completed)
+	{
+		if (m_SqlTopRanks.front()->m_Success)
+			SendLeaderboardInfo();
+		if (m_SqlTopRanks.front()->m_Done)
+			m_SqlTopRanks.pop_front();
 	}
 
 	// Record player position at the end of the tick
@@ -2077,6 +2103,9 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientId)
 		case NETMSGTYPE_CL_EMOTICON:
 			OnEmoticonNetMessage(static_cast<CNetMsg_Cl_Emoticon *>(pRawMsg), ClientId);
 			break;
+		case NETMSGTYPE_CL_LEADERBOARDINFO: //my changes
+			OnLeaderboardNetMessage(static_cast<CNetMsg_Cl_LeaderboardInfo *>(pRawMsg), ClientId);
+			break;
 		case NETMSGTYPE_CL_KILL:
 			OnKillNetMessage(static_cast<CNetMsg_Cl_Kill *>(pRawMsg), ClientId);
 			break;
@@ -2783,6 +2812,16 @@ void CGameContext::OnEmoticonNetMessage(const CNetMsg_Cl_Emoticon *pMsg, int Cli
 		}
 		pChr->SetEmote(EmoteType, Server()->Tick() + 2 * Server()->TickSpeed());
 	}
+}
+
+
+//my changes MY TODO change the 10 to macro
+void CGameContext::OnLeaderboardNetMessage(const CNetMsg_Cl_LeaderboardInfo *pMsg, int ClientId)
+{
+	if(m_World.m_Paused)
+		return;
+
+	m_pScore->GetTopRanks(pMsg->m_FirstRankToDisplay, pMsg->m_AmountOfRanksToDisplay, ClientId);
 }
 
 void CGameContext::OnKillNetMessage(const CNetMsg_Cl_Kill *pMsg, int ClientId)

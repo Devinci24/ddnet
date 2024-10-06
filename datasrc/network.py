@@ -593,4 +593,19 @@ Messages = [
 	NetMessageEx("Sv_MapSoundGlobal", "map-sound-global@netmsg.ddnet.org", [
 		NetIntAny("m_SoundId"),
 	]),
+
+	#my changes
+	NetMessageEx("Cl_LeaderboardInfo", "cl-leaderboard-info@idc.com", [
+		NetIntAny("m_FirstRankToDisplay"),
+		NetIntAny("m_AmountOfRanksToDisplay"),
+	]),
+
+	#MY TODO Change the 10 to macro
+	NetMessageEx("Sv_LeaderboardInfo", "sv-leaderboard-info@idc.com", [
+		NetIntRange("m_ClientId", 0, 'MAX_CLIENTS-1'),
+		NetArray(NetString("m_PlayerNames"), 10),
+		NetArray(NetIntAny("m_PlayerTimes"), 10),
+	]),
+
+
 ]

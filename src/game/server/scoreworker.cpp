@@ -128,6 +128,47 @@ bool CScoreWorker::LoadBestTime(IDbConnection *pSqlServer, const ISqlData *pGame
 	return false;
 }
 
+//my changes
+bool CScoreWorker::LoadFastestRanks(IDbConnection *pSqlServer, const ISqlData *pGameData, char *pError, int ErrorSize)
+{
+	const auto *pData = dynamic_cast<const CSqlLoadFastestRanksData *>(pGameData);
+	auto *pResult = dynamic_cast<CScoreLoadFastestRanksResult *>(pGameData->m_pResult.get());
+
+	char aBuf[512];
+	// get the best time
+	//"SELECT Name, Time FROM %s_race WHERE Map = ? ORDER BY Time ASC LIMIT %d",
+	str_format(aBuf, sizeof(aBuf),
+		"SELECT Name, MIN(Time) AS Time "
+		"FROM %s_race "
+		"WHERE Map = ? "
+		"GROUP BY Name "
+		"ORDER BY Time ASC "
+		"LIMIT %d OFFSET %d",
+		pSqlServer->GetPrefix(), pData->m_AmountOfRanksToDisplay, pData->m_FirstRankToDisplay);
+	if(pSqlServer->PrepareStatement(aBuf, pError, ErrorSize))
+	{
+		return true;
+	}
+	pSqlServer->BindString(1, pData->m_aMap);
+
+	bool End;
+
+	for (int i = 0; i < 10; i++) //MY TODO change this 10 to macro
+	{
+		if(pSqlServer->Step(&End, pError, ErrorSize))
+			return true;
+
+		//dbg_msg("log", "STARTING QUERY LOOP, end is %i", End);
+		if(!End)
+		{
+			pSqlServer->GetString(1, pResult->m_PlayerNames.at(i), sizeof(pResult->m_PlayerNames.at(i)));
+			pResult->m_PlayerTimes.at(i) = pSqlServer->GetFloat(2);
+		}
+	}
+
+	return false;
+}
+
 // update stuff
 bool CScoreWorker::LoadPlayerData(IDbConnection *pSqlServer, const ISqlData *pGameData, char *pError, int ErrorSize)
 {

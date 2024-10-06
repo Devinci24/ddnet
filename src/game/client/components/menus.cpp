@@ -96,6 +96,12 @@ CMenus::CMenus()
 
 	m_PasswordInput.SetBuffer(g_Config.m_Password, sizeof(g_Config.m_Password));
 	m_PasswordInput.SetHidden(true);
+
+	//my changes
+	for (size_t i = 0; i < m_PlayerNames.max_size(); i++)
+		str_copy(m_PlayerNames[i], "", MAX_NAME_LENGTH);
+	m_PlayerTimes.fill(0);
+	m_FirstRankToDisplay = 0;
 }
 
 int CMenus::DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, bool Active)
@@ -894,6 +900,7 @@ void CMenus::OnConsoleInit()
 	ConfigManager()->RegisterCallback(CMenus::ConfigSaveCallback, this);
 	Console()->Register("add_favorite_skin", "s[skin_name]", CFGFLAG_CLIENT, Con_AddFavoriteSkin, this, "Add a skin as a favorite");
 	Console()->Register("remove_favorite_skin", "s[skin_name]", CFGFLAG_CLIENT, Con_RemFavoriteSkin, this, "Remove a skin from the favorites");
+	Console()->Register("+leaderboard", "", CFGFLAG_CLIENT, ConKeyLeaderboard, this, "Open Leaderboard");
 }
 
 void CMenus::ConchainBackgroundEntities(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
@@ -2146,7 +2153,7 @@ void CMenus::OnShutdown()
 
 bool CMenus::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 {
-	if(!m_MenuActive)
+	if(!m_MenuActive && !IsLeaderboardActive())
 		return false;
 
 	Ui()->ConvertMouseMove(&x, &y, CursorType);
@@ -2157,6 +2164,13 @@ bool CMenus::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 
 bool CMenus::OnInput(const IInput::CEvent &Event)
 {
+	//my changes
+    if(Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE && IsLeaderboardActive())
+	{
+		m_LeaderboardActive = false;
+		return true;
+	}
+
 	// Escape key is always handled to activate/deactivate menu
 	if((Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE) || IsActive())
 	{
@@ -2224,6 +2238,13 @@ void CMenus::OnRender()
 		Client()->Disconnect();
 		SetActive(true);
 		PopupMessage(Localize("Disconnected"), Localize("The server is running a non-standard tuning on a pure game type."), Localize("Ok"));
+	}
+
+	if((Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK) && IsLeaderboardActive())
+	{
+		renderLeaderboard();
+		Ui()->Update();
+		RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
 	}
 
 	if(!IsActive())

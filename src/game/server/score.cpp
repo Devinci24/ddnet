@@ -283,6 +283,28 @@ void CScore::RandomUnfinishedMap(int ClientId, int Stars)
 	m_pPool->Execute(CScoreWorker::RandomUnfinishedMap, std::move(Tmp), "random unfinished map");
 }
 
+//my changes
+void CScore::GetTopRanks(int FirstRankToDisplay, int AmountOfRanksToDisplay, int ClientId)
+{
+	auto pResult = std::make_shared<CScoreLoadFastestRanksResult>();
+	GameServer()->m_SqlTopRanks.push_back(pResult);
+
+	//initialize SqlTopRanks to default values
+	GameServer()->m_SqlTopRanks.back()->m_TargetClient = ClientId;
+	GameServer()->m_SqlTopRanks.back()->m_Done = false;
+	for (long unsigned int i = 0; i < GameServer()->m_SqlTopRanks.back()->m_PlayerNames.max_size(); i++)
+		str_copy(GameServer()->m_SqlTopRanks.back()->m_PlayerNames[i], "empty", MAX_NAME_LENGTH);
+	GameServer()->m_SqlTopRanks.back()->m_PlayerTimes.fill(0);
+
+	auto Tmp = std::make_unique<CSqlLoadFastestRanksData>(pResult); //MY TODO use this firstrank and amount.
+	Tmp->m_FirstRankToDisplay = FirstRankToDisplay;
+	Tmp->m_AmountOfRanksToDisplay = AmountOfRanksToDisplay;
+	str_copy(Tmp->m_aMap, Server()->GetMapName(), sizeof(Tmp->m_aMap));
+
+	m_pPool->Execute(CScoreWorker::LoadFastestRanks, std::move(Tmp), "Global Top ??");
+
+}
+
 void CScore::SaveTeam(int ClientId, const char *pCode, const char *pServer)
 {
 	if(RateLimitPlayer(ClientId))

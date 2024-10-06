@@ -58,7 +58,6 @@
 #include "components/spectator.h"
 #include "components/statboard.h"
 #include "components/tooltips.h"
-#include "components/topranksviewer.h" //my changes
 #include "components/voting.h"
 
 class CGameInfo
@@ -165,7 +164,6 @@ public:
 
 	CRaceDemo m_RaceDemo;
 	CGhost m_Ghost;
-	CDemoViewer m_DemoViewer; //my changes
 
 	CTooltips m_Tooltips;
 
