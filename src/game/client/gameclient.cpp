@@ -991,7 +991,7 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 	{
 		CNetMsg_Sv_LeaderboardInfo *pMsg = (CNetMsg_Sv_LeaderboardInfo *)pRawMsg;
 
-		// dbg_msg("Leadeboard", "server message received");
+		//dbg_msg("Leadeboard", "server message received");
 		// apply
 		for(size_t i = 0; i < m_Menus.m_aPlayerLeaderboard.max_size(); i++)
  		{

@@ -270,7 +270,7 @@ public:
 	void SendChat(int ClientId, int Team, const char *pText, int SpamProtectionClientId = -1, int VersionFlags = FLAG_SIX | FLAG_SIXUP);
 	void SendStartWarning(int ClientId, const char *pMessage);
 	void SendEmoticon(int ClientId, int Emoticon, int TargetClientId) const;
-	void SendLeaderboardInfo(); //my changes
+	void SendLeaderboardInfo(SClientInfo ClientRequest); //my changes
 	void SendWeaponPickup(int ClientId, int Weapon) const;
 	void SendMotd(int ClientId) const;
 	void SendSettings(int ClientId) const;
@@ -373,10 +373,13 @@ public:
 	std::shared_ptr<CScoreRandomMapResult> m_SqlRandomMapResult;
 
 	//my changes
-	void ClearCachedLeaderboard(bool PlayerFinished, SLeaderboard Player = SLeaderboard());
+	void UpdateLeaderboardOnFinish(SLeaderboard Player = SLeaderboard());
+	void FillCachedLeaderboard();
 
-	std::deque<std::shared_ptr<CScoreLoadFastestRanksResult>> m_SqlTopRanks;
+	std::deque<SClientInfo> m_ClientRequests;
+	std::shared_ptr<CScoreFillCachedLeaderboardResult> m_SqlLeaderboard;
 	std::vector<SLeaderboard> m_CachedLeaderboard;
+	bool m_Updating = false;
 
 private:
 	// starting 1 to make 0 the special value "no client id"

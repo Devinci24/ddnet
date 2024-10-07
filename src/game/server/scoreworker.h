@@ -1,6 +1,7 @@
 #ifndef GAME_SERVER_SCOREWORKER_H
 #define GAME_SERVER_SCOREWORKER_H
 
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
@@ -84,6 +85,11 @@ struct CSqlLoadBestTimeData : ISqlData
 };
 
 //my changes
+struct SClientInfo
+{
+	int m_TargetClient;
+	int m_FirstRankToDisplay;
+};
 
 struct SLeaderboard
 {
@@ -91,20 +97,15 @@ struct SLeaderboard
 	float m_PlayerTime = 0.0f;
 };
 
-struct CScoreLoadFastestRanksResult : ISqlResult
+#define LEADERBOARD_CACHED_RANKS 100
+struct CScoreFillCachedLeaderboardResult : ISqlResult
 {
-
-	std::array<SLeaderboard, LEADERBOARD_DISPLAY_RANKS> m_aPlayerLeaderboard;
-	int m_TargetClient;
-	bool m_Done;
-	size_t m_FirstRankToDisplay;
-
+	std::array<SLeaderboard, LEADERBOARD_CACHED_RANKS> m_aSqlCachedLeaderboard;
 };
 
-//my changes
-struct CSqlLoadFastestRanksData : ISqlData
+struct CSqlFillCachedLeaderboardData : ISqlData
 {
-	CSqlLoadFastestRanksData(std::shared_ptr<CScoreLoadFastestRanksResult> pResult) :
+	CSqlFillCachedLeaderboardData(std::shared_ptr<CScoreFillCachedLeaderboardResult> pResult) :
 		ISqlData(std::move(pResult))
 	{
 	}
@@ -112,6 +113,7 @@ struct CSqlLoadFastestRanksData : ISqlData
 	// current map
 	char m_aMap[MAX_MAP_LENGTH];
 	int m_FirstRankToDisplay;
+	size_t m_Offset;
 };
 
 struct CSqlPlayerRequest : ISqlData

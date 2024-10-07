@@ -131,10 +131,11 @@ bool CScoreWorker::LoadBestTime(IDbConnection *pSqlServer, const ISqlData *pGame
 //my changes
 bool CScoreWorker::LoadFastestRanks(IDbConnection *pSqlServer, const ISqlData *pGameData, char *pError, int ErrorSize)
 {
-	const auto *pData = dynamic_cast<const CSqlLoadFastestRanksData *>(pGameData);
-	auto *pResult = dynamic_cast<CScoreLoadFastestRanksResult *>(pGameData->m_pResult.get());
+	const auto *pData = dynamic_cast<const CSqlFillCachedLeaderboardData *>(pGameData);
+	auto *pResult = dynamic_cast<CScoreFillCachedLeaderboardResult *>(pGameData->m_pResult.get());
 
 	char aBuf[512];
+	size_t Limit = pData->m_FirstRankToDisplay + (LEADERBOARD_CACHED_RANKS - (pData->m_FirstRankToDisplay % LEADERBOARD_CACHED_RANKS));
 	// get the best time
 	//"SELECT Name, Time FROM %s_race WHERE Map = ? ORDER BY Time ASC LIMIT %d",
 	str_format(aBuf, sizeof(aBuf),
@@ -144,7 +145,7 @@ bool CScoreWorker::LoadFastestRanks(IDbConnection *pSqlServer, const ISqlData *p
 		"GROUP BY Name "
 		"ORDER BY Time ASC "
 		"LIMIT %d OFFSET %d",
-		pSqlServer->GetPrefix(), LEADERBOARD_DISPLAY_RANKS, pData->m_FirstRankToDisplay);
+		pSqlServer->GetPrefix(), Limit, pData->m_Offset);
 	if(pSqlServer->PrepareStatement(aBuf, pError, ErrorSize))
 	{
 		return true;
@@ -153,7 +154,7 @@ bool CScoreWorker::LoadFastestRanks(IDbConnection *pSqlServer, const ISqlData *p
 
 	bool End;
 
-	for (int i = 0; i < LEADERBOARD_DISPLAY_RANKS; i++)
+	for (int i = 0; i < LEADERBOARD_CACHED_RANKS; i++)
 	{
 		if(pSqlServer->Step(&End, pError, ErrorSize))
 			return true;
@@ -164,9 +165,12 @@ bool CScoreWorker::LoadFastestRanks(IDbConnection *pSqlServer, const ISqlData *p
 			pSqlServer->GetString(1, Leaderboard.m_PlayerName, sizeof(Leaderboard.m_PlayerName));
 			Leaderboard.m_PlayerTime = pSqlServer->GetFloat(2);
 
-			pResult->m_aPlayerLeaderboard[i] = Leaderboard;
+			pResult->m_aSqlCachedLeaderboard[i] = Leaderboard;
 		}
 	}
+
+	for(auto Rank : pResult->m_aSqlCachedLeaderboard)
+		dbg_msg("LEADEBOARD", "Name is: %s ... Time is %f", Rank.m_PlayerName, Rank.m_PlayerTime);
 
 	return false;
 }

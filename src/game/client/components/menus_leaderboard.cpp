@@ -5,6 +5,7 @@
 #include <game/localization.h>
 #include <limits>
 
+#include "base/system.h"
 #include "engine/graphics.h"
 #include "engine/shared/protocol.h"
 #include "menus.h"
@@ -12,10 +13,10 @@
 //MY TODO :
 
 // 1. Somehow use LEADERBOARD_DISPLAY_RANKS in network.py
-// 2. Keep a list on server about TopRanks so no sql queries are performed
-// 3. Change m_CachedLeaderboard to also keep track of indexes and make it more robust. Change vector to map<index, SLeaderboard> ?
+// 2. possibly limit the amount of ranks cachedLeaderboard can query?
+// 3. Make sure cachedleaderboard doesn't bug somehow when new player finishes and size is not a multiple od LEADERBOARD_CACHED_RANK anymore (LOOKS FINE)
 // 4. Fix leaderboard not reloading on map change.
-// 5. Somehow make it that you can write in chat while leaderboard open and best case scenario also aim
+// 5. Somehow make it that you can write in chat while leaderboard (but chat doesn't work after clicking button) open and best case scenario also aim
 
 void CMenus::renderLeaderboardBackground(CUIRect *pRect)
 {
@@ -136,8 +137,14 @@ void CMenus::getLeaderboardInfo() //MY TODO maybe call it request?
 void CMenus::ConKeyLeaderboard(IConsole::IResult *pResult, void *pUserData)
 {
     CMenus *pSelf = (CMenus *)pUserData;
-    if (pResult->GetInteger(0) != 0 && !pSelf->IsLeaderboardActive())
-        pSelf->m_LeaderboardActive = true;
-    else if (pResult->GetInteger(0) != 0 && pSelf->IsLeaderboardActive())
-        pSelf->m_LeaderboardActive = false;
+    if (pResult->GetInteger(0)) //why do I need this
+        pSelf->m_LeaderboardActive = !pSelf->m_LeaderboardActive;
+}
+
+void CMenus::ConLeaderboardAim(IConsole::IResult *pResult, void *pUserData)
+{
+    CMenus *pSelf = (CMenus *)pUserData;
+
+    bool State = pResult->NumArguments() ? pResult->GetInteger(0) : !pSelf->m_LeaderboardAimState;
+    pSelf->m_LeaderboardAimState = State;
 }

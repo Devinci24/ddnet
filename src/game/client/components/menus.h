@@ -830,10 +830,14 @@ public:
 	void renderLeaderboardFooter(CUIRect *Leaderboard, bool &doRequest);
 
 	static void ConKeyLeaderboard(IConsole::IResult *pResult, void *pUserData);
+	static void ConLeaderboardAim(IConsole::IResult *pResult, void *pUserData);
+
 	void getLeaderboardInfo(void);
 
 	bool m_LeaderboardActive;
+	bool m_LeaderboardAimState;
 	int m_FirstRankToDisplay;
+
 	struct SLeaderboard
 	{
 		char m_PlayerName[MAX_NAME_LENGTH] = "empty\0";

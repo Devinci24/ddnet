@@ -290,36 +290,15 @@ void CScore::RandomUnfinishedMap(int ClientId, int Stars)
 //my changes
 void CScore::GetTopRanks(int FirstRankToDisplay, int ClientId)
 {
-	auto pResult = std::make_shared<CScoreLoadFastestRanksResult>();
-	GameServer()->m_SqlTopRanks.push_back(pResult);
+	auto pResult = std::make_shared<CScoreFillCachedLeaderboardResult>();
+	GameServer()->m_SqlLeaderboard = pResult;
 
-	//initialize SqlTopRanks to default values
-	GameServer()->m_SqlTopRanks.back()->m_TargetClient = ClientId;
-	GameServer()->m_SqlTopRanks.back()->m_Done = false;
-	GameServer()->m_SqlTopRanks.back()->m_FirstRankToDisplay = FirstRankToDisplay;
+	auto Tmp = std::make_unique<CSqlFillCachedLeaderboardData>(pResult);
+	Tmp->m_FirstRankToDisplay = FirstRankToDisplay;
+	Tmp->m_Offset = GameServer()->m_CachedLeaderboard.size();
+	str_copy(Tmp->m_aMap, Server()->GetMapName(), sizeof(Tmp->m_aMap));
 
-	// dbg_msg("getTopRanks", "size is: %d, element is %s", (int)GameServer()->m_CachedLeaderboard.size(), GameServer()->m_CachedLeaderboard.front().m_PlayerName);
-	// dbg_msg("getTopRanks", "first rank is : %d", FirstRankToDisplay);
-	if ((int)GameServer()->m_CachedLeaderboard.size() >= (FirstRankToDisplay + LEADERBOARD_DISPLAY_RANKS))
-	{
-		//Use cached Leaderboard if Available
-		//auto Leaderboard = GameServer()->m_SqlTopRanks.back()->m_aPlayerLeaderboard;
-		for(int i = 0; i < LEADERBOARD_DISPLAY_RANKS; i++)
-		{
-			str_copy(GameServer()->m_SqlTopRanks.back()->m_aPlayerLeaderboard[i].m_PlayerName, GameServer()->m_CachedLeaderboard[FirstRankToDisplay + i].m_PlayerName);
-			GameServer()->m_SqlTopRanks.back()->m_aPlayerLeaderboard[i].m_PlayerTime = GameServer()->m_CachedLeaderboard[FirstRankToDisplay + i].m_PlayerTime;
-		}
-		GameServer()->m_SqlTopRanks.back()->m_Completed = true;
-		GameServer()->m_SqlTopRanks.back()->m_Success = true;
-	}
-	else
-	{
-		auto Tmp = std::make_unique<CSqlLoadFastestRanksData>(pResult);
-		Tmp->m_FirstRankToDisplay = FirstRankToDisplay;
-		str_copy(Tmp->m_aMap, Server()->GetMapName(), sizeof(Tmp->m_aMap));
-
-		m_pPool->Execute(CScoreWorker::LoadFastestRanks, std::move(Tmp), "Leaderboard display ranks");
-	}
+	m_pPool->Execute(CScoreWorker::LoadFastestRanks, std::move(Tmp), "Leaderboard display ranks");
 }
 
 void CScore::SaveTeam(int ClientId, const char *pCode, const char *pServer)

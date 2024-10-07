@@ -2,6 +2,8 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "gamecontext.h"
 
+#include <cstddef>
+#include <sys/socket.h>
 #include <utility>
 #include <vector>
 
@@ -721,37 +723,18 @@ void CGameContext::SendEmoticon(int ClientId, int Emoticon, int TargetClientId) 
 }
 
 //my changes
-void CGameContext::SendLeaderboardInfo()
+void CGameContext::SendLeaderboardInfo(SClientInfo ClientRequest)
 {
 	CNetMsg_Sv_LeaderboardInfo Msg;
-	int TargetClient = m_SqlTopRanks.front()->m_TargetClient;
-	
-	int i = 0;
-	for(auto &Rank : m_SqlTopRanks.back()->m_aPlayerLeaderboard)
-	{
-		Msg.m_PlayerNames[i] = Rank.m_PlayerName;
-		Msg.m_PlayerTimes[i] = int(Rank.m_PlayerTime *= 1000);
-		i++;
+	int TargetClient = ClientRequest.m_TargetClient;
+	int FirstRankToDisplay = ClientRequest.m_FirstRankToDisplay;
 
-		//Needs to make sure m_CachedLeaderboard is built in order and that nothing can fuck it up...
-		if (m_CachedLeaderboard.size() >=  m_SqlTopRanks.back()->m_FirstRankToDisplay // constructs only LEADERBOARD_DISPLAY_RANK from FirstRankToDisplay
-			&& m_CachedLeaderboard.size() <=  m_SqlTopRanks.back()->m_FirstRankToDisplay + LEADERBOARD_DISPLAY_RANKS
-			&& m_SqlTopRanks.back()->m_FirstRankToDisplay % LEADERBOARD_DISPLAY_RANKS == 0) //in case someone changes their client and sends unexpected number
-		{
-			SLeaderboard Player;
-			str_copy(Player.m_PlayerName, Rank.m_PlayerName);
-			Player.m_PlayerTime = Rank.m_PlayerTime;
-			m_CachedLeaderboard.emplace_back(Player);
-		}
+	for(int i = 0; i < LEADERBOARD_DISPLAY_RANKS; i++)
+	{
+		Msg.m_PlayerNames[i] = m_CachedLeaderboard[FirstRankToDisplay + i].m_PlayerName;
+		Msg.m_PlayerTimes[i] = int(m_CachedLeaderboard[FirstRankToDisplay + i].m_PlayerTime * 1000);
 	}
 
-	// for (SLeaderboard item : m_CachedLeaderboard)
-	// {
-	// 	dbg_msg("leaderboard", "name: %s, time %f", item.m_PlayerName, item.m_PlayerTime);
-	// }
-	// dbg_msg("Leaderboard", "done\n\n");
-
-	m_SqlTopRanks.front()->m_Done = true;
 	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, TargetClient);
 }
 
@@ -1330,12 +1313,17 @@ void CGameContext::OnTick()
 	}
 
 	//my changes
-	if(!m_SqlTopRanks.empty() && m_SqlTopRanks.front()->m_Completed)
+	if(m_SqlLeaderboard != nullptr && m_SqlLeaderboard->m_Completed)
 	{
-		if (m_SqlTopRanks.front()->m_Success)
-			SendLeaderboardInfo();
-		if (m_SqlTopRanks.front()->m_Done)
-			m_SqlTopRanks.pop_front();
+		if (m_SqlLeaderboard->m_Success)
+			FillCachedLeaderboard();//SendLeaderboardInfo();
+	}
+	if (!m_Updating
+		&& !m_ClientRequests.empty()
+		&& m_ClientRequests.front().m_FirstRankToDisplay + LEADERBOARD_DISPLAY_RANKS < (int)m_CachedLeaderboard.size())
+	{
+		SendLeaderboardInfo(m_ClientRequests.front());
+		m_ClientRequests.pop_front();
 	}
 
 	// Record player position at the end of the tick
@@ -2841,37 +2829,47 @@ void CGameContext::OnLeaderboardNetMessage(const CNetMsg_Cl_LeaderboardInfo *pMs
 	if(m_World.m_Paused)
 		return;
 
-	m_pScore->GetTopRanks(pMsg->m_FirstRankToDisplay, ClientId);
+	m_ClientRequests.push_back(SClientInfo{ClientId, pMsg->m_FirstRankToDisplay});
+
+	if ((int)m_CachedLeaderboard.size() < pMsg->m_FirstRankToDisplay + LEADERBOARD_DISPLAY_RANKS)
+	{
+		m_Updating = true;
+		m_pScore->GetTopRanks(pMsg->m_FirstRankToDisplay, ClientId);
+	}
 }
 
-void CGameContext::ClearCachedLeaderboard(bool PlayerFinished, SLeaderboard Player)
+void CGameContext::UpdateLeaderboardOnFinish(SLeaderboard Player)
 {
-	int FirstRankToDisplay = 0;
-	if (!PlayerFinished)
-		m_CachedLeaderboard.clear();
-	else
+	//int FirstRankToDisplay = 0;
+
+	auto PlayerNameIt = std::find_if(m_CachedLeaderboard.begin(), m_CachedLeaderboard.end(),
+						[&Player](SLeaderboard &Rank){
+							return Player.m_PlayerName == Rank.m_PlayerName;
+						});
+	auto PlayerTimeIt = std::find_if(m_CachedLeaderboard.begin(), m_CachedLeaderboard.end(),
+						[&Player](SLeaderboard &Rank){
+							return Player.m_PlayerTime < Rank.m_PlayerTime;
+						});
+
+	//if player improved his time
+	if (PlayerNameIt != m_CachedLeaderboard.end() && Player.m_PlayerTime < PlayerNameIt->m_PlayerTime)
 	{
-		auto PlayerNameIt = std::find_if(m_CachedLeaderboard.begin(), m_CachedLeaderboard.end(),
-							[&Player](SLeaderboard &Rank){
-								return Player.m_PlayerName == Rank.m_PlayerName;
-							});
-		auto PlayerTimeIt = std::find_if(m_CachedLeaderboard.begin(), m_CachedLeaderboard.end(),
-							[&Player](SLeaderboard &Rank){
-								return Player.m_PlayerTime < Rank.m_PlayerTime;
-							});
-
-		//if player improved his time
-		if (PlayerNameIt != m_CachedLeaderboard.end() && Player.m_PlayerTime < PlayerNameIt->m_PlayerTime)
-		{
-			m_CachedLeaderboard.erase(PlayerNameIt);
-			m_CachedLeaderboard.insert(PlayerTimeIt, Player);
-		}
-		if (PlayerNameIt == m_CachedLeaderboard.end() && PlayerTimeIt != m_CachedLeaderboard.end() && Player.m_PlayerTime < PlayerNameIt->m_PlayerTime) //if new player has done a time
-			m_CachedLeaderboard.insert(PlayerTimeIt, Player);
+		m_CachedLeaderboard.erase(PlayerNameIt);
+		m_CachedLeaderboard.insert(PlayerTimeIt, Player);
 	}
+	if (PlayerNameIt == m_CachedLeaderboard.end() && PlayerTimeIt != m_CachedLeaderboard.end() && Player.m_PlayerTime < PlayerNameIt->m_PlayerTime) //if new player has done a time
+		m_CachedLeaderboard.insert(PlayerTimeIt, Player);
 
-	if (!PlayerFinished)
-		m_pScore->GetTopRanks(FirstRankToDisplay, -1);
+	//m_pScore->GetTopRanks(FirstRankToDisplay, -1);
+}
+
+void CGameContext::FillCachedLeaderboard()
+{
+	m_CachedLeaderboard.insert(m_CachedLeaderboard.end(),
+						m_SqlLeaderboard->m_aSqlCachedLeaderboard.begin(),
+						m_SqlLeaderboard->m_aSqlCachedLeaderboard.end());
+	m_Updating = false;
+	m_SqlLeaderboard = nullptr;
 }
 
 void CGameContext::OnKillNetMessage(const CNetMsg_Cl_Kill *pMsg, int ClientId)
@@ -4236,10 +4234,6 @@ void CGameContext::OnMapChange(char *pNewMapName, int MapNameSize)
 {
 	char aConfig[IO_MAX_PATH_LENGTH];
 	str_format(aConfig, sizeof(aConfig), "maps/%s.cfg", g_Config.m_SvMap);
-
-	//my changes THIS DOESN'T WORK
-	if (!m_CachedLeaderboard.empty())
-		ClearCachedLeaderboard(false);
 
 	CLineReader LineReader;
 	if(!LineReader.OpenFile(Storage()->OpenFile(aConfig, IOFLAG_READ, IStorage::TYPE_ALL)))

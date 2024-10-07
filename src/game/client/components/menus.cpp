@@ -99,6 +99,7 @@ CMenus::CMenus()
 
 	//my changes
 	m_FirstRankToDisplay = 0;
+	m_LeaderboardAimState = false;
 }
 
 int CMenus::DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, bool Active)
@@ -898,6 +899,7 @@ void CMenus::OnConsoleInit()
 	Console()->Register("add_favorite_skin", "s[skin_name]", CFGFLAG_CLIENT, Con_AddFavoriteSkin, this, "Add a skin as a favorite");
 	Console()->Register("remove_favorite_skin", "s[skin_name]", CFGFLAG_CLIENT, Con_RemFavoriteSkin, this, "Remove a skin from the favorites");
 	Console()->Register("+leaderboard", "", CFGFLAG_CLIENT, ConKeyLeaderboard, this, "Open Leaderboard");
+	Console()->Register("+leaderboard_aim", "?i[state]", CFGFLAG_CLIENT, ConLeaderboardAim, this, "Turns on/off aim when leaderboard on");
 }
 
 void CMenus::ConchainBackgroundEntities(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
@@ -2150,7 +2152,7 @@ void CMenus::OnShutdown()
 
 bool CMenus::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 {
-	if(!m_MenuActive && !IsLeaderboardActive())
+	if(!m_MenuActive && !IsLeaderboardActive() && !m_LeaderboardAimState)
 		return false;
 
 	Ui()->ConvertMouseMove(&x, &y, CursorType);
@@ -2162,10 +2164,11 @@ bool CMenus::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 bool CMenus::OnInput(const IInput::CEvent &Event)
 {
 	//my changes
-
 	if (Event.m_Flags & IInput::FLAG_PRESS && IsLeaderboardActive())
 	{
-		if (Event.m_Key == KEY_ESCAPE)
+		if (GameClient()->m_Chat.IsActive())
+			GameClient()->m_Chat.OnInput(Event);
+		else if (Event.m_Key == KEY_ESCAPE)
 			m_LeaderboardActive = false;
 		else if (Event.m_Key == KEY_MOUSE_1 && Ui()->HotItem())
 			return true;
