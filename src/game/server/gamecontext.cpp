@@ -1679,6 +1679,8 @@ void CGameContext::OnClientEnter(int ClientId)
 		Mute(&Addr, g_Config.m_SvChatInitialDelay, Server()->ClientName(ClientId), "Initial chat delay", true);
 	}
 
+	//my changes
+	LeaderboardUpdate(0, ClientId);
 	LogEvent("Connect", ClientId);
 }
 
@@ -2829,12 +2831,16 @@ void CGameContext::OnLeaderboardNetMessage(const CNetMsg_Cl_LeaderboardInfo *pMs
 	if(m_World.m_Paused)
 		return;
 
-	m_ClientRequests.push_back(SClientInfo{ClientId, pMsg->m_FirstRankToDisplay});
+	LeaderboardUpdate(pMsg->m_FirstRankToDisplay, ClientId);
+}
 
-	if ((int)m_CachedLeaderboard.size() < pMsg->m_FirstRankToDisplay + LEADERBOARD_DISPLAY_RANKS)
+void CGameContext::LeaderboardUpdate(int FirstRankToDisplay, int ClientId)
+{
+	m_ClientRequests.push_back(SClientInfo{ClientId, FirstRankToDisplay});
+	if ((int)m_CachedLeaderboard.size() < FirstRankToDisplay + LEADERBOARD_DISPLAY_RANKS)
 	{
 		m_Updating = true;
-		m_pScore->GetTopRanks(pMsg->m_FirstRankToDisplay, ClientId);
+		m_pScore->GetTopRanks(FirstRankToDisplay, ClientId);
 	}
 }
 

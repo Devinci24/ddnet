@@ -901,9 +901,9 @@ void CMenus::OnConsoleInit()
 	Console()->Register("add_favorite_skin", "s[skin_name]", CFGFLAG_CLIENT, Con_AddFavoriteSkin, this, "Add a skin as a favorite");
 	Console()->Register("remove_favorite_skin", "s[skin_name]", CFGFLAG_CLIENT, Con_RemFavoriteSkin, this, "Remove a skin from the favorites");
 	Console()->Register("show_leaderboard", "", CFGFLAG_CLIENT, ConKeyLeaderboard, this, "Open Leaderboard");
-	//Console()->Register("leaderboard_Ui", "?i[state]", CFGFLAG_CLIENT, ConLeaderboardUiOnly, this, "Turns on/off aim when leaderboard on");
-	//Console()->Register("leaderboard_next", "?i[state]", CFGFLAG_CLIENT, ConLeaderboardNextRanks, this, "get the next ranks of leaderboard");
-	//Console()->Register("leaderboard_prev", "?i[state]", CFGFLAG_CLIENT, ConLeaderboardPreviousRanks, this, "get the previous ranks of leaderboard");
+	Console()->Register("leaderboard_Ui", "?i[state]", CFGFLAG_CLIENT, ConLeaderboardUiOnly, this, "Turns on/off aim when leaderboard on");
+	Console()->Register("leaderboard_next", "?i[state]", CFGFLAG_CLIENT, ConLeaderboardNextRanks, this, "get the next ranks of leaderboard");
+	Console()->Register("leaderboard_prev", "?i[state]", CFGFLAG_CLIENT, ConLeaderboardPreviousRanks, this, "get the previous ranks of leaderboard");
 }
 
 void CMenus::ConchainBackgroundEntities(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
@@ -2170,13 +2170,11 @@ bool CMenus::OnInput(const IInput::CEvent &Event)
 	//my changes
 	if (Event.m_Flags & IInput::FLAG_PRESS && IsLeaderboardActive())
 	{
-		// if (GameClient()->m_Chat.IsActive())
-		// 	CGameClient().m_Chat.EnableMode(1);
-		// if (Event.m_Key == KEY_ESCAPE)
-		// 	m_LeaderboardActive = false;
-		// else if (Event.m_Key == KEY_MOUSE_1 && Ui()->HotItem())
-		// 	return true;
-		// return false;
+		if (Event.m_Key == KEY_ESCAPE)
+			m_LeaderboardActive = false;
+		else if (Event.m_Key == KEY_MOUSE_1 && Ui()->HotItem())
+			return true;
+		return false;
 	}
 
 	// Escape key is always handled to activate/deactivate menu

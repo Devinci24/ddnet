@@ -373,6 +373,7 @@ public:
 	std::shared_ptr<CScoreRandomMapResult> m_SqlRandomMapResult;
 
 	//my changes
+	void LeaderboardUpdate(int FirstRankToDisplay, int ClientId);
 	void UpdateLeaderboardOnFinish(SLeaderboard Player = SLeaderboard());
 	void FillCachedLeaderboard();
 

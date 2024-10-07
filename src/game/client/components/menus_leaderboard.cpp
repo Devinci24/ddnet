@@ -3,7 +3,6 @@
 #include <game/client/ui_listbox.h>
 
 #include <game/localization.h>
-#include <limits>
 
 #include "base/system.h"
 #include "engine/graphics.h"
