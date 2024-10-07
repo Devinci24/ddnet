@@ -827,15 +827,17 @@ public:
 	void renderLeaderboard();
 	void renderLeaderboardBackground(CUIRect *pRect);
 	void renderTopRanksOnLeaderboard(CUIRect *Leaderboard);
-	void renderLeaderboardFooter(CUIRect *Leaderboard, bool &doRequest);
+	void renderLeaderboardFooter(CUIRect *Leaderboard);
 
 	static void ConKeyLeaderboard(IConsole::IResult *pResult, void *pUserData);
-	static void ConLeaderboardAim(IConsole::IResult *pResult, void *pUserData);
+	static void ConLeaderboardUiOnly(IConsole::IResult *pResult, void *pUserData);
+	static void ConLeaderboardNextRanks(IConsole::IResult *pResult, void *pUserData);
+	static void ConLeaderboardPreviousRanks(IConsole::IResult *pResult, void *pUserData);
 
-	void getLeaderboardInfo(void);
+	void getLeaderboardInfo(int FirstRankToDispla);
 
 	bool m_LeaderboardActive;
-	bool m_LeaderboardAimState;
+	bool m_LeaderboardUiOn;
 	int m_FirstRankToDisplay;
 
 	struct SLeaderboard

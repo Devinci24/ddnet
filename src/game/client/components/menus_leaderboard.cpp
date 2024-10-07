@@ -16,7 +16,7 @@
 // 2. possibly limit the amount of ranks cachedLeaderboard can query?
 // 3. Make sure cachedleaderboard doesn't bug somehow when new player finishes and size is not a multiple od LEADERBOARD_CACHED_RANK anymore (LOOKS FINE)
 // 4. Fix leaderboard not reloading on map change.
-// 5. Somehow make it that you can write in chat while leaderboard (but chat doesn't work after clicking button) open and best case scenario also aim
+// 5. Somehow make it that you can write in chat while leaderboard (but chat doesn't work after clicking button) open.
 
 void CMenus::renderLeaderboardBackground(CUIRect *pRect)
 {
@@ -81,7 +81,7 @@ void  CMenus::renderTopRanksOnLeaderboard(CUIRect *Leaderboard)
 }
 
 //CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color)
-void CMenus::renderLeaderboardFooter(CUIRect *Leaderboard, bool &DoRequest)
+void CMenus::renderLeaderboardFooter(CUIRect *Leaderboard)
 {
     if(g_Config.m_SvHideScore)
 		return;
@@ -93,58 +93,59 @@ void CMenus::renderLeaderboardFooter(CUIRect *Leaderboard, bool &DoRequest)
 
     Leaderboard->VSplitRight(LeaderboardSize.x / 3, nullptr, &Next);
     Leaderboard->VSplitLeft(LeaderboardSize.x / 3, &Prev, nullptr);
-    if (DoButton_Menu(&s_PrevButton, Localize("<"), 0, &Prev, nullptr, IGraphics::CORNER_ALL , 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) && m_FirstRankToDisplay - LEADERBOARD_DISPLAY_RANKS >= 0)
-    {
-        m_FirstRankToDisplay = m_FirstRankToDisplay - LEADERBOARD_DISPLAY_RANKS;
-        DoRequest = true;
-    }
+    if (DoButton_Menu(&s_PrevButton, Localize("<"), 0, &Prev, nullptr, IGraphics::CORNER_ALL , 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+        getLeaderboardInfo(m_FirstRankToDisplay - LEADERBOARD_DISPLAY_RANKS);
+
     if (DoButton_Menu(&s_NextButton, Localize(">"), 0, &Next, nullptr, IGraphics::CORNER_ALL , 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
-    {
-        m_FirstRankToDisplay += LEADERBOARD_DISPLAY_RANKS; //TODO maybe check is this is bigger than the total amount of ranks?
-        DoRequest = true;
-    }
+        getLeaderboardInfo(m_FirstRankToDisplay + LEADERBOARD_DISPLAY_RANKS); //TODO maybe check is this is bigger than the total amount of ranks?
 }
 
 void CMenus::renderLeaderboard()
 {
     CUIRect Leaderboard;
-
-    static bool s_doRequest = true;
-    if (s_doRequest) // if we have all the info we require
-    {
-        getLeaderboardInfo();
-        s_doRequest = false;
-    }
-
-    // if (m_PlayerNames.at(0))
-    // {
-    //     dbg_msg("log", "player names are : %s", m_PlayerNames.at(0));
-    //     dbg_msg("log", "player times are : %f", m_PlayerTimes.at(0)); 
-    // }
     
     renderLeaderboardBackground(&Leaderboard);
 	renderTopRanksOnLeaderboard(&Leaderboard);
-    renderLeaderboardFooter(&Leaderboard, s_doRequest);
+    renderLeaderboardFooter(&Leaderboard);
 }
 
-void CMenus::getLeaderboardInfo() //MY TODO maybe call it request?
+void CMenus::getLeaderboardInfo(int FirstRankToDisplay) //MY TODO maybe call it request?
 {
-	CNetMsg_Cl_LeaderboardInfo Msg;
-	Msg.m_FirstRankToDisplay = m_FirstRankToDisplay;
+    if (FirstRankToDisplay < 0)
+        return ;
+    
+    m_FirstRankToDisplay = FirstRankToDisplay;
+
+    CNetMsg_Cl_LeaderboardInfo Msg;
+	Msg.m_FirstRankToDisplay = FirstRankToDisplay;
 	Client()->SendPackMsgActive(&Msg, MSGFLAG_VITAL);
 }
 
 void CMenus::ConKeyLeaderboard(IConsole::IResult *pResult, void *pUserData)
 {
     CMenus *pSelf = (CMenus *)pUserData;
-    if (pResult->GetInteger(0)) //why do I need this
-        pSelf->m_LeaderboardActive = !pSelf->m_LeaderboardActive;
+    
+    pSelf->m_LeaderboardActive = !pSelf->m_LeaderboardActive;
 }
 
-void CMenus::ConLeaderboardAim(IConsole::IResult *pResult, void *pUserData)
+void CMenus::ConLeaderboardUiOnly(IConsole::IResult *pResult, void *pUserData)
 {
     CMenus *pSelf = (CMenus *)pUserData;
 
-    bool State = pResult->NumArguments() ? pResult->GetInteger(0) : !pSelf->m_LeaderboardAimState;
-    pSelf->m_LeaderboardAimState = State;
+    bool State = pResult->NumArguments() ? pResult->GetInteger(0) : !pSelf->m_LeaderboardUiOn;
+    pSelf->m_LeaderboardUiOn = State;
+}
+
+void CMenus::ConLeaderboardNextRanks(IConsole::IResult *pResult, void *pUserData)
+{
+    CMenus *pSelf = (CMenus *)pUserData;
+
+    pSelf->getLeaderboardInfo(pSelf->m_FirstRankToDisplay + LEADERBOARD_DISPLAY_RANKS);
+}
+
+void CMenus::ConLeaderboardPreviousRanks(IConsole::IResult *pResult, void *pUserData)
+{
+    CMenus *pSelf = (CMenus *)pUserData;
+
+    pSelf->getLeaderboardInfo(pSelf->m_FirstRankToDisplay - LEADERBOARD_DISPLAY_RANKS);
 }

@@ -263,7 +263,7 @@ void CBinds::SetDefaults()
 	Bind(KEY_MOUSE_1, "+fire");
 	Bind(KEY_MOUSE_2, "+hook");
 	Bind(KEY_LSHIFT, "+emote");
-	Bind(KEY_L, "+leaderboard");//, false, MODIFIER_CTRL); //my changes
+	Bind(KEY_L, "show_leaderboard");//, false, MODIFIER_CTRL); //my changes
 	Bind(KEY_RETURN, "+show_chat; chat all");
 	Bind(KEY_RIGHT, "spectate_next");
 	Bind(KEY_LEFT, "spectate_previous");

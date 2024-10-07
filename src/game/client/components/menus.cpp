@@ -35,6 +35,8 @@
 #include <game/localization.h>
 
 #include "menus.h"
+#include "engine/console.h"
+#include "game/client/components/chat.h"
 
 using namespace FontIcons;
 using namespace std::chrono_literals;
@@ -99,7 +101,7 @@ CMenus::CMenus()
 
 	//my changes
 	m_FirstRankToDisplay = 0;
-	m_LeaderboardAimState = false;
+	m_LeaderboardUiOn = false;
 }
 
 int CMenus::DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, bool Active)
@@ -898,8 +900,10 @@ void CMenus::OnConsoleInit()
 	ConfigManager()->RegisterCallback(CMenus::ConfigSaveCallback, this);
 	Console()->Register("add_favorite_skin", "s[skin_name]", CFGFLAG_CLIENT, Con_AddFavoriteSkin, this, "Add a skin as a favorite");
 	Console()->Register("remove_favorite_skin", "s[skin_name]", CFGFLAG_CLIENT, Con_RemFavoriteSkin, this, "Remove a skin from the favorites");
-	Console()->Register("+leaderboard", "", CFGFLAG_CLIENT, ConKeyLeaderboard, this, "Open Leaderboard");
-	Console()->Register("+leaderboard_aim", "?i[state]", CFGFLAG_CLIENT, ConLeaderboardAim, this, "Turns on/off aim when leaderboard on");
+	Console()->Register("show_leaderboard", "", CFGFLAG_CLIENT, ConKeyLeaderboard, this, "Open Leaderboard");
+	//Console()->Register("leaderboard_Ui", "?i[state]", CFGFLAG_CLIENT, ConLeaderboardUiOnly, this, "Turns on/off aim when leaderboard on");
+	//Console()->Register("leaderboard_next", "?i[state]", CFGFLAG_CLIENT, ConLeaderboardNextRanks, this, "get the next ranks of leaderboard");
+	//Console()->Register("leaderboard_prev", "?i[state]", CFGFLAG_CLIENT, ConLeaderboardPreviousRanks, this, "get the previous ranks of leaderboard");
 }
 
 void CMenus::ConchainBackgroundEntities(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
@@ -2152,7 +2156,7 @@ void CMenus::OnShutdown()
 
 bool CMenus::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 {
-	if(!m_MenuActive && !IsLeaderboardActive() && !m_LeaderboardAimState)
+	if((!m_MenuActive && !IsLeaderboardActive()) || (IsLeaderboardActive() && m_LeaderboardUiOn))
 		return false;
 
 	Ui()->ConvertMouseMove(&x, &y, CursorType);
@@ -2166,13 +2170,13 @@ bool CMenus::OnInput(const IInput::CEvent &Event)
 	//my changes
 	if (Event.m_Flags & IInput::FLAG_PRESS && IsLeaderboardActive())
 	{
-		if (GameClient()->m_Chat.IsActive())
-			GameClient()->m_Chat.OnInput(Event);
-		else if (Event.m_Key == KEY_ESCAPE)
-			m_LeaderboardActive = false;
-		else if (Event.m_Key == KEY_MOUSE_1 && Ui()->HotItem())
-			return true;
-		return false;
+		// if (GameClient()->m_Chat.IsActive())
+		// 	CGameClient().m_Chat.EnableMode(1);
+		// if (Event.m_Key == KEY_ESCAPE)
+		// 	m_LeaderboardActive = false;
+		// else if (Event.m_Key == KEY_MOUSE_1 && Ui()->HotItem())
+		// 	return true;
+		// return false;
 	}
 
 	// Escape key is always handled to activate/deactivate menu
@@ -2244,11 +2248,13 @@ void CMenus::OnRender()
 		PopupMessage(Localize("Disconnected"), Localize("The server is running a non-standard tuning on a pure game type."), Localize("Ok"));
 	}
 
-	if((Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK) && IsLeaderboardActive())
+	//my changes
+	if((Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK) && (IsLeaderboardActive()))
 	{
 		renderLeaderboard();
 		Ui()->Update();
-		RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
+		if (!m_LeaderboardUiOn)
+			RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
 	}
 
 	if(!IsActive())
