@@ -3,6 +3,7 @@
 #include "gamecontext.h"
 
 #include <cstddef>
+#include <iterator>
 #include <sys/socket.h>
 #include <utility>
 #include <vector>
@@ -2844,17 +2845,19 @@ void CGameContext::LeaderboardUpdate(int FirstRankToDisplay, int ClientId)
 	}
 }
 
+//HEEELLP
 void CGameContext::UpdateLeaderboardOnFinish(SLeaderboard Player)
 {
 	//int FirstRankToDisplay = 0;
 
+	Player.m_PlayerTime = Player.m_PlayerTime / 1000;
 	auto PlayerNameIt = std::find_if(m_CachedLeaderboard.begin(), m_CachedLeaderboard.end(),
 						[&Player](SLeaderboard &Rank){
-							return Player.m_PlayerName == Rank.m_PlayerName;
+							return !str_comp(Player.m_PlayerName, Rank.m_PlayerName);
 						});
 	auto PlayerTimeIt = std::find_if(m_CachedLeaderboard.begin(), m_CachedLeaderboard.end(),
 						[&Player](SLeaderboard &Rank){
-							return Player.m_PlayerTime < Rank.m_PlayerTime;
+							return (Player.m_PlayerTime < Rank.m_PlayerTime || !Rank.m_PlayerTime);
 						});
 
 	//if player improved his time
@@ -2862,8 +2865,8 @@ void CGameContext::UpdateLeaderboardOnFinish(SLeaderboard Player)
 	{
 		m_CachedLeaderboard.erase(PlayerNameIt);
 		m_CachedLeaderboard.insert(PlayerTimeIt, Player);
-	}
-	if (PlayerNameIt == m_CachedLeaderboard.end() && PlayerTimeIt != m_CachedLeaderboard.end() && Player.m_PlayerTime < PlayerNameIt->m_PlayerTime) //if new player has done a time
+	} //if new player
+	else if (PlayerNameIt == m_CachedLeaderboard.end())
 		m_CachedLeaderboard.insert(PlayerTimeIt, Player);
 
 	//m_pScore->GetTopRanks(FirstRankToDisplay, -1);

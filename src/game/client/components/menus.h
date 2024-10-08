@@ -825,9 +825,10 @@ public:
 
 	//my changes
 	void renderLeaderboard();
-	void renderLeaderboardBackground(CUIRect *pRect);
-	void renderTopRanksOnLeaderboard(CUIRect *Leaderboard);
-	void renderLeaderboardFooter(CUIRect *Leaderboard);
+	void PrepareLeaderboard(CUIRect *Content, CUIRect *Header, CUIRect *Footer);
+	void RenderLeaderboardHeader(CUIRect *Header);
+	void RenderTopRanksOnLeaderboard(CUIRect *Content);
+	void RenderLeaderboardFooter(CUIRect *Footer);
 
 	static void ConKeyLeaderboard(IConsole::IResult *pResult, void *pUserData);
 	static void ConLeaderboardUiOnly(IConsole::IResult *pResult, void *pUserData);

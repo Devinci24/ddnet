@@ -101,7 +101,7 @@ CMenus::CMenus()
 
 	//my changes
 	m_FirstRankToDisplay = 0;
-	m_LeaderboardUiOn = false;
+	m_LeaderboardUiOn = true;
 }
 
 int CMenus::DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, bool Active)

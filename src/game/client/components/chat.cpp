@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 
+#include <cstddef>
 #include <engine/editor.h>
 #include <engine/graphics.h>
 #include <engine/keys.h>
@@ -452,7 +453,10 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			m_CompletionUsed = false;
 		}
 
+		//my changes . This looks extremely sketchy.
+		Ui()->SetActiveItem(&m_Input);
 		m_Input.ProcessInput(Event);
+		Ui()->SetActiveItem(nullptr);
 	}
 
 	if(Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_UP)
