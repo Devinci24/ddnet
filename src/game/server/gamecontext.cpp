@@ -3493,25 +3493,14 @@ void CGameContext::ConchainSettingUpdate(IConsole::IResult *pResult, void *pUser
 }
 
 //my changes
-
 void CGameContext::ConRestartCup(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 
-	if (auto pCupController = dynamic_cast<CGameControllerCup*>(pSelf->m_pController)) {
-		
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "restarting cup");
+	if (auto *pCupController = dynamic_cast<CGameControllerCup*>(pSelf->m_pController)) {
 
-		for(int ClientId = 0; ClientId < pSelf->Server()->MaxClients(); ClientId++)
-		{
-			if(pSelf->Server()->ClientIngame(ClientId))
-			{
-				CPlayer *pPlayer = pCupController->Teams().GetPlayer(ClientId);
-				pPlayer->m_Score.reset();
-				pPlayer->SetTeam(TEAM_FLOCK);
-			}
-		}
-		pCupController->m_fnRestartCup();
+		pCupController->StartCup(pResult->GetInteger(0));
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "restarting cup");
 
 	} else {
 		log_warn("server", "Failed to restart cup");
@@ -3558,7 +3547,7 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("dump_antibot", "", CFGFLAG_SERVER, ConDumpAntibot, this, "Dumps the antibot status");
 	Console()->Register("antibot", "r[command]", CFGFLAG_SERVER, ConAntibot, this, "Sends a command to the antibot");
 
-	Console()->Register("restart_cup", "", CFGFLAG_SERVER, ConRestartCup, this, "restart the cup");
+	Console()->Register("COTW_restart", "?i[seconds]", CFGFLAG_SERVER, ConRestartCup, this, "restart the cup (60 seconds warmup by default)");
 
 	Console()->Chain("sv_motd", ConchainSpecialMotdupdate, this);
 

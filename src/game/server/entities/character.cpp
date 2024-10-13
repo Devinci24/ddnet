@@ -942,8 +942,7 @@ void CCharacter::Die(int Killer, int Weapon, bool SendKillMsg)
 	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 
 	// send the kill message
-	//my changes
-	if(!GameServer()->m_pController->IsRoundStarted() && (SendKillMsg && (Team() == TEAM_FLOCK || Teams()->TeamFlock(Team()) || Teams()->Count(Team()) == 1 || Teams()->GetTeamState(Team()) == CGameTeams::TEAMSTATE_OPEN || !Teams()->TeamLocked(Team()))))
+	if(SendKillMsg && (Team() == TEAM_FLOCK || Teams()->TeamFlock(Team()) || Teams()->Count(Team()) == 1 || Teams()->GetTeamState(Team()) == CGameTeams::TEAMSTATE_OPEN || !Teams()->TeamLocked(Team())))
 	{
 		CNetMsg_Sv_KillMsg Msg;
 		Msg.m_Killer = Killer;
@@ -1316,7 +1315,8 @@ void CCharacter::HandleBroadcast()
 
 	if(m_DDRaceState == DDRACE_STARTED && m_pPlayer->GetClientVersion() == VERSION_VANILLA &&
 		m_LastTimeCpBroadcasted != m_LastTimeCp && m_LastTimeCp > -1 &&
-		m_TimeCpBroadcastEndTick > Server()->Tick() && pData->m_BestTime && pData->m_aBestTimeCp[m_LastTimeCp] != 0)
+		m_TimeCpBroadcastEndTick > Server()->Tick() && pData->m_BestTime && pData->m_aBestTimeCp[m_LastTimeCp] != 0 &&
+		GameServer()->m_pController->GetState() == 3) // <- //my changes
 	{
 		char aBroadcast[128];
 		float Diff = m_aCurrentTimeCp[m_LastTimeCp] - pData->m_aBestTimeCp[m_LastTimeCp];
@@ -1466,11 +1466,10 @@ void CCharacter::HandleTiles(int Index)
 		m_LastBonus = false;
 		return;
 	}
-	if (!GameServer()->m_pController->IsRoundStarted())
-	{
-		SetTimeCheckpoint(Collision()->IsTimeCheckpoint(MapIndex));
-		SetTimeCheckpoint(Collision()->IsFTimeCheckpoint(MapIndex));
-	}
+
+	SetTimeCheckpoint(Collision()->IsTimeCheckpoint(MapIndex));
+	SetTimeCheckpoint(Collision()->IsFTimeCheckpoint(MapIndex));
+
 	int TeleCheckpoint = Collision()->IsTeleCheckpoint(MapIndex);
 	if(TeleCheckpoint)
 		m_TeleCheckpoint = TeleCheckpoint;

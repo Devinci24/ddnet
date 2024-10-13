@@ -143,8 +143,6 @@ private:
 	bool m_WeakHookSpawn;
 	int m_ClientId;
 	int m_Team;
-	//my changes
-	int m_previousTeam;
 
 	int m_Paused;
 	int64_t m_ForcePauseTime;

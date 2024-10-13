@@ -510,11 +510,13 @@ bool IGameController::CanBeMovedOnBalance(int ClientId)
 void IGameController::Tick()
 {
 	// do warmup
-	if(m_Warmup)
+	if(m_Warmup > 0)
 	{
 		m_Warmup--;
-		if(!m_Warmup)
-			StartRound();
+
+		//my changes : comment next 2 lines and m_Warmup > 0 instead of m_Warmup
+		// if(!m_Warmup)
+		// 	StartRound();
 	}
 
 	if(m_GameOverTick != -1)
@@ -731,7 +733,7 @@ void IGameController::DoTeamChange(CPlayer *pPlayer, int Team, bool DoChatMsg)
 	// OnPlayerInfoChange(pPlayer);
 }
 
-bool IGameController::IsRoundStarted() const
+int IGameController::GetState() const
 {
-	return false;
+	return 0;
 }

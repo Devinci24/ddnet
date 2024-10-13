@@ -3,57 +3,66 @@
 
 #include <game/server/gamecontroller.h>
 #include <vector>
-#include <utility>
+#include <iterator>
 #include <algorithm>
 
 class CGameControllerCup : public IGameController
 {
 private:
 
-	bool m_TunesOn;
-	bool m_StopAll;
-	bool m_RoundStarted;
-	bool m_SomeoneHasFinished;
-	bool m_IsFirstRound;
-	int m_FirstFinisherTick;
-	int m_NumberOfPlayerLeft;
-	int64_t m_lastScoreBroadcast;
-	std::set<int> m_finishedPlayers;
-	std::map<const char *, const int> m_disconnectedPlayers;
+	struct m_sPlayersInfo {
+		std::string m_PlayerName;
+		float m_CurrentTimeCP = -1;
+		int m_AmountOfTimeCPs = 0;
+		bool m_HasFinished = false;
+	};
 
-	void m_fnSendTimeLeftWarmupMsg();
-	void m_fnPauseServer();
-	void m_fnStartRoundTimer(int Seconds);
+	enum
+	{
+		STATE_NONE,
+		STATE_WARMUP,
+		STATE_WARMUP_ROUND,
+		STATE_ROUND,
+	};
 
-	void m_fnRemoveEliminatedPlayers();
-	bool m_fnDoesElementExist(const int ClientId);
-	int m_fnGetIndexOfElement(const int ClientId);
-	int m_fnGetId(int ClientId);
+	int m_CupState;
 
-	std::set<int> GetPlayersIdOnTeam(int teamId);
-	void sendKillFeed(std::set<int> PlayersId, int teamId);
-	void setSplits(CPlayer *pThisPlayer, int currentcp);
+	std::vector<m_sPlayersInfo> m_PlayerLeaderboard;
+
+	//start
+	void m_fnSendtWarmupMsg();
+	void m_PrepareRound();
+	void m_fnPausePlayersTune();
+	void StartRound() override; //do I really want to override?
+
+	//end
+	void EndRound() override; //do I really want to override?
+	void m_RemoveEliminatedPlayers();
+
+	//Rounds
+	void m_SetSplits(CPlayer *pThisPlayer, int TimeCheckpoint);
+	void m_CupOnPlayerFinish(int ClientId);
+	void m_CleanUp();
+
+	//utils
+	std::vector<m_sPlayersInfo>::iterator m_GetPlayerByName(const char* PlayerName);
+	static bool m_SplitsComparator(const m_sPlayersInfo& player1, m_sPlayersInfo& player2);
+
+	//overrides
+	//bool CanJoinTeam(int Team, int NotThisId, char *pErrorReason, int ErrorReasonSize) override;
 
 public:
-
-	std::vector<std::pair<int, float>> m_RoundScores;
-
 	CGameControllerCup(class CGameContext *pGameServer);
 	~CGameControllerCup();
 
 	CScore *Score();
 
 	void Tick() override;
-
-	void m_fnRestartCup();
-	void OnPlayerConnect(class CPlayer *pPlayer) override;
-	void StartRound() override;
-	void EndRound() override;
 	void HandleCharacterTiles(class CCharacter *pChr, int MapIndex) override;
 	void Snap(int SnappingClient) override;
-	void DoWarmup(int Seconds) override;
-	void OnPlayerDisconnect(class CPlayer *pPlayer, const char *pReason) override;
+	void OnPlayerConnect(CPlayer *pPlayer) override;
 
-	bool IsRoundStarted() const override;
+	void StartCup(int WarmupTime);
+	int GetState() const override;
 };
 #endif // GAME_SERVER_GAMEMODES_MOD_H
