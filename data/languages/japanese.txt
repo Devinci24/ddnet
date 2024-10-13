@@ -76,7 +76,7 @@ Client
 Connecting to
 == 接続先
 
-Connection Problems...
+Connection Problems…
 == 接続中に問題が発生
 
 Console
@@ -274,9 +274,6 @@ Player
 Player country:
 == 所在地:
 
-Player options
-== プレイヤー設定
-
 Players
 == プレーヤー
 
@@ -458,9 +455,6 @@ Max demos
 
 Internet
 == オンライン
-
-Round
-== ラウンド
 
 News
 == ニュース
@@ -687,9 +681,6 @@ Kill
 Pause
 == 観察
 
-Reload
-== 更新
-
 Deactivate
 == 無効にする
 
@@ -870,9 +861,6 @@ Assets
 DDNet Client needs to be restarted to complete update!
 == アップデートを完了するには、DDNet クライアントの再起動が必要です。
 
-Use DDRace Scoreboard
-== DDRace スゴアボードを使用
-
 Show score
 == スコアを表示
 
@@ -981,7 +969,7 @@ DDNet %s is available:
 Update now
 == 今すぐ更新
 
-Updating...
+Updating…
 == 更新中…
 
 DDNet Client updated!
@@ -1045,7 +1033,7 @@ DDNet %s is out!
 Downloading %s:
 == %s をダウンロード中:
 
-Update failed! Check log...
+Update failed! Check log…
 == 更新に失敗しました！ログを確認してください。
 
 Restart
@@ -1141,7 +1129,16 @@ Could not initialize the given graphics backend, reverting to the default backen
 Could not initialize the given graphics backend, this is probably because you didn't install the driver of the integrated graphics card.
 == 
 
+Could not resolve connect address '%s'. See local console for details.
+== 
+
+Connect address error
+== 
+
 Could not save downloaded map. Try manually deleting this file: %s
+== 
+
+Could not connect dummy
 == 
 
 Error playing demo
@@ -1168,10 +1165,13 @@ Connected
 Loading map file from storage
 == 
 
-Why are you slowmo replaying to read this?
+Loading demo file from storage
 == 
 
 Initializing components
+== 
+
+Why are you slowmo replaying to read this?
 == 
 
 Initializing assets
@@ -1234,6 +1234,10 @@ Angle:
 Multi-View
 == 
 
+[Spectating]
+Following %s
+== 
+
 Team %d
 == 
 
@@ -1255,24 +1259,6 @@ Press a key…
 Main menu
 == 
 
-Trying to determine UDP connectivity...
-== 
-
-UDP seems to be filtered.
-== 
-
-UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or network accelerators.
-== 
-
-No answer from server yet.
-== 
-
-Getting game info
-== 
-
-Requesting to join the game
-== 
-
 Rename folder
 == 
 
@@ -1280,6 +1266,12 @@ Render complete
 == 
 
 Are you sure that you want to restart?
+== 
+
+Save skin
+== 
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == 
 
 There's an unsaved map in the editor, you might want to save it.
@@ -1315,6 +1307,33 @@ Join Tutorial Server
 Skip Tutorial
 == 
 
+Unable to save the skin
+== 
+
+Unable to save the skin with a reserved name
+== 
+
+Trying to determine UDP connectivity…
+== 
+
+UDP seems to be filtered.
+== 
+
+UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or network accelerators.
+== 
+
+No answer from server yet.
+== 
+
+%d/%d KiB (%.1f KiB/s)
+== 
+
+Getting game info
+== 
+
+Requesting to join the game
+== 
+
 Loading menu images
 == 
 
@@ -1339,7 +1358,16 @@ SA
 CHN
 == 
 
+No local servers found (ports %d-%d)
+== 
+
+Example of usage
+== 
+
 Are you sure that you want to disconnect and switch to a different server?
+== 
+
+No login required
 == 
 
 Communities
@@ -1502,6 +1530,12 @@ Unable to delete the demo '%s'
 Unable to delete the folder '%s'. Make sure it's empty first.
 == 
 
+Dummy is not allowed on this server
+== 
+
+Please wait…
+== 
+
 Loading…
 == 
 
@@ -1520,6 +1554,10 @@ Deactivate all
 Menu opened. Press Esc key again to close menu.
 == 
 
+[Hertz]
+Hz
+== 
+
 Save power by lowering refresh rate (higher input latency)
 == 
 
@@ -1536,6 +1574,9 @@ Open the directory that contains the configuration and user files
 == 
 
 Open the directory to add custom themes
+== 
+
+Player info change cooldown
 == 
 
 Download community skins
@@ -1627,6 +1668,9 @@ Graphics card
 auto
 == 
 
+Tee
+== 
+
 Appearance
 == 
 
@@ -1648,7 +1692,7 @@ Show local time always
 DDRace HUD
 == 
 
-Show client IDs in scoreboard
+Show client IDs (scoreboard, chat, spectator)
 == 
 
 Show DDRace HUD
@@ -1675,13 +1719,25 @@ Show freeze bars
 Opacity of freeze bars inside freeze
 == 
 
+Always show chat
+== 
+
+Show only chat messages from team members
+== 
+
 Chat font size
 == 
 
 Chat width
 == 
 
-Show hook strength indicator
+Show friend mark (♥) in name plates
+== 
+
+Show hook strength icon indicator
+== 
+
+Show hook strength number indicator
 == 
 
 Show local player's key presses
@@ -1694,6 +1750,15 @@ Same clan color in scoreboard
 == 
 
 Hook collision line
+== 
+
+Show own player's hook collision line
+== 
+
+Always show own player's hook collision line
+== 
+
+Always show other players' hook collision lines
 == 
 
 Hook collision line width
@@ -1792,6 +1857,21 @@ Chat command (e.g. showall 1)
 Unregister protocol and file extensions
 == 
 
+Basic
+== 
+
+Custom
+== 
+
+Are you sure that you want to delete '%s'?
+== 
+
+Delete skin
+== 
+
+Unable to delete skin
+== 
+
 Extras
 == 
 
@@ -1810,11 +1890,52 @@ Can't find a Tutorial server
 Loading race demo files
 == 
 
+Round %d/%d
+== 
+
+[Spectators]
+%d others…
+== 
+
 Super
+== 
+
+[Team and size]
+%d\n(%d/%d)
+== 
+
+Team %d (%d/%d)
+== 
+
+[skins]
+Body
+== 
+
+[skins]
+Marking
+== 
+
+[skins]
+Decoration
+== 
+
+[skins]
+Hands
+== 
+
+[skins]
+Feet
+== 
+
+[skins]
+Eyes
 == 
 
 Loading sound files
 == 
 
 Moved ingame
+== 
+
+https://wiki.ddnet.org/wiki/Mapping
 == 

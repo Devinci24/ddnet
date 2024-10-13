@@ -79,8 +79,8 @@ Client
 Connecting to
 == Konektovanje na
 
-Connection Problems...
-== Problemi sa konekcijom...
+Connection Problems…
+== Problemi sa konekcijom…
 
 Console
 == Konzola
@@ -279,9 +279,6 @@ Player
 
 Player country:
 == Država
-
-Player options
-== Postavke igrača
 
 Players
 == Igrači
@@ -501,9 +498,6 @@ Your skin
 Reset to defaults
 == Vrati na početne postavke
 
-Round
-== Runda
-
 Lht.
 == Svjetl.
 
@@ -618,8 +612,8 @@ DDNet %s is out!
 Downloading %s:
 == Preuzimanje %s:
 
-Update failed! Check log...
-== Ažuriranje neuspješno! Provjeri log...
+Update failed! Check log…
+== Ažuriranje neuspješno! Provjeri log…
 
 DDNet Client updated!
 == DDNet Klijent ažuriran!
@@ -653,9 +647,6 @@ Connecting dummy
 
 Connect Dummy
 == Konektuj dummy-a
-
-Reload
-== Reload
 
 Deactivate
 == Deaktiviraj
@@ -786,9 +777,6 @@ Map sound volume
 DDNet Client needs to be restarted to complete update!
 == DDNet Klijent mora da se restartuje da bi završio ažuriranje!
 
-Use DDRace Scoreboard
-== Koristi DDRace tablicu bodova
-
 Show score
 == Prikaži bodove
 
@@ -876,8 +864,8 @@ Show tiles layers from BG map
 DDNet %s is available:
 == DDNet %s je dostupan:
 
-Updating...
-== Ažuriranje...
+Updating…
+== Ažuriranje…
 
 No updates available
 == Nema dostupnih ažuriranja
@@ -957,7 +945,16 @@ Could not initialize the given graphics backend, reverting to the default backen
 Could not initialize the given graphics backend, this is probably because you didn't install the driver of the integrated graphics card.
 == 
 
+Could not resolve connect address '%s'. See local console for details.
+== 
+
+Connect address error
+== 
+
 Could not save downloaded map. Try manually deleting this file: %s
+== 
+
+Could not connect dummy
 == 
 
 Error playing demo
@@ -987,10 +984,13 @@ Connected
 Loading map file from storage
 == 
 
-Why are you slowmo replaying to read this?
+Loading demo file from storage
 == 
 
 Initializing components
+== 
+
+Why are you slowmo replaying to read this?
 == 
 
 Initializing assets
@@ -1059,6 +1059,10 @@ Angle:
 Multi-View
 == 
 
+[Spectating]
+Following %s
+== 
+
 Team %d
 == 
 
@@ -1077,31 +1081,13 @@ Loading menu themes
 Press a key…
 == 
 
-Main menu
-== 
-
 Settings
 == 
 
 Editor
 == 
 
-Trying to determine UDP connectivity...
-== 
-
-UDP seems to be filtered.
-== 
-
-UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or network accelerators.
-== 
-
-No answer from server yet.
-== 
-
-Getting game info
-== 
-
-Requesting to join the game
+Main menu
 == 
 
 Rename folder
@@ -1120,6 +1106,12 @@ Your nickname '%s' is already used (%d points). Do you still want to use it?
 == 
 
 Checking for existing player with your name
+== 
+
+Save skin
+== 
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == 
 
 There's an unsaved map in the editor, you might want to save it.
@@ -1158,6 +1150,33 @@ Join Tutorial Server
 Skip Tutorial
 == 
 
+Unable to save the skin
+== 
+
+Unable to save the skin with a reserved name
+== 
+
+Trying to determine UDP connectivity…
+== 
+
+UDP seems to be filtered.
+== 
+
+UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or network accelerators.
+== 
+
+No answer from server yet.
+== 
+
+%d/%d KiB (%.1f KiB/s)
+== 
+
+Getting game info
+== 
+
+Requesting to join the game
+== 
+
 Theme
 == 
 
@@ -1188,6 +1207,12 @@ CHN
 Getting server list from master server
 == 
 
+No local servers found (ports %d-%d)
+== 
+
+Example of usage
+== 
+
 %d of %d servers
 == 
 
@@ -1201,6 +1226,9 @@ Getting server list from master server
 == 
 
 Are you sure that you want to disconnect and switch to a different server?
+== 
+
+No login required
 == 
 
 Communities
@@ -1375,6 +1403,12 @@ Unable to delete the demo '%s'
 Unable to delete the folder '%s'. Make sure it's empty first.
 == 
 
+Dummy is not allowed on this server
+== 
+
+Please wait…
+== 
+
 Loading…
 == 
 
@@ -1397,6 +1431,10 @@ Smooth Dynamic Camera
 == 
 
 Skip the main menu
+== 
+
+[Hertz]
+Hz
 == 
 
 Save power by lowering refresh rate (higher input latency)
@@ -1424,6 +1462,9 @@ Max CSVs
 == 
 
 Dummy
+== 
+
+Player info change cooldown
 == 
 
 Download skins
@@ -1545,6 +1586,9 @@ Chat sound volume
 Background music volume
 == 
 
+Tee
+== 
+
 Appearance
 == 
 
@@ -1575,7 +1619,7 @@ Show local time always
 DDRace HUD
 == 
 
-Show client IDs in scoreboard
+Show client IDs (scoreboard, chat, spectator)
 == 
 
 Show DDRace HUD
@@ -1602,6 +1646,12 @@ Show freeze bars
 Opacity of freeze bars inside freeze
 == 
 
+Always show chat
+== 
+
+Show only chat messages from team members
+== 
+
 Use old chat style
 == 
 
@@ -1614,7 +1664,13 @@ Chat width
 Preview
 == 
 
-Show hook strength indicator
+Show friend mark (♥) in name plates
+== 
+
+Show hook strength icon indicator
+== 
+
+Show hook strength number indicator
 == 
 
 Show local player's key presses
@@ -1627,6 +1683,15 @@ Same clan color in scoreboard
 == 
 
 Hook collision line
+== 
+
+Show own player's hook collision line
+== 
+
+Always show own player's hook collision line
+== 
+
+Always show other players' hook collision lines
 == 
 
 Hook collision line width
@@ -1740,6 +1805,21 @@ Chat command (e.g. showall 1)
 Unregister protocol and file extensions
 == 
 
+Basic
+== 
+
+Custom
+== 
+
+Are you sure that you want to delete '%s'?
+== 
+
+Delete skin
+== 
+
+Unable to delete skin
+== 
+
 Emoticons
 == 
 
@@ -1792,7 +1872,21 @@ Play
 Loading race demo files
 == 
 
+Round %d/%d
+== 
+
+[Spectators]
+%d others…
+== 
+
 Super
+== 
+
+[Team and size]
+%d\n(%d/%d)
+== 
+
+Team %d (%d/%d)
 == 
 
 Manual
@@ -1805,6 +1899,30 @@ Auto
 == 
 
 Replay
+== 
+
+[skins]
+Body
+== 
+
+[skins]
+Marking
+== 
+
+[skins]
+Decoration
+== 
+
+[skins]
+Hands
+== 
+
+[skins]
+Feet
+== 
+
+[skins]
+Eyes
 == 
 
 Loading sound files
@@ -1820,4 +1938,7 @@ Grabs
 == 
 
 Moved ingame
+== 
+
+https://wiki.ddnet.org/wiki/Mapping
 == 

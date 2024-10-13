@@ -4,6 +4,88 @@
 
 #include <game/gamecore.h>
 
+TEST(Str, StrDelim)
+{
+	int Start, End;
+	//                                      0123456
+	//                            01234567891111111
+	EXPECT_EQ(str_delimiters_around_offset("123;123456789;aaa", ";", 5, &Start, &End), true);
+	EXPECT_EQ(Start, 4);
+	EXPECT_EQ(End, 13);
+
+	EXPECT_EQ(str_delimiters_around_offset("123;123", ";", 1, &Start, &End), false);
+	EXPECT_EQ(Start, 0);
+	EXPECT_EQ(End, 3);
+
+	EXPECT_EQ(str_delimiters_around_offset("---foo---bar---baz---hello", "---", 1, &Start, &End), false);
+	EXPECT_EQ(Start, 0);
+	EXPECT_EQ(End, 0);
+
+	EXPECT_EQ(str_delimiters_around_offset("---foo---bar---baz---hello", "---", 2, &Start, &End), false);
+	EXPECT_EQ(Start, 0);
+	EXPECT_EQ(End, 0);
+
+	EXPECT_EQ(str_delimiters_around_offset("---foo---bar---baz---hello", "---", 3, &Start, &End), true);
+	EXPECT_EQ(Start, 3);
+	EXPECT_EQ(End, 6);
+
+	EXPECT_EQ(str_delimiters_around_offset("---foo---bar---baz---hello", "---", 4, &Start, &End), true);
+	EXPECT_EQ(Start, 3);
+	EXPECT_EQ(End, 6);
+
+	EXPECT_EQ(str_delimiters_around_offset("---foo---bar---baz---hello", "---", 9, &Start, &End), true);
+	EXPECT_EQ(Start, 9);
+	EXPECT_EQ(End, 12);
+
+	EXPECT_EQ(str_delimiters_around_offset("---foo---bar---baz---hello", "---", 22, &Start, &End), false);
+	EXPECT_EQ(Start, 21);
+	EXPECT_EQ(End, 26);
+
+	EXPECT_EQ(str_delimiters_around_offset("foo;;;;bar;;;;;;", ";", 2, &Start, &End), false);
+	EXPECT_EQ(Start, 0);
+	EXPECT_EQ(End, 3);
+
+	EXPECT_EQ(str_delimiters_around_offset("foo;;;;bar;;;;;;", ";", 3, &Start, &End), false);
+	EXPECT_EQ(Start, 0);
+	EXPECT_EQ(End, 3);
+
+	EXPECT_EQ(str_delimiters_around_offset("foo;;;;bar;;;;;;", ";", 4, &Start, &End), true);
+	EXPECT_EQ(Start, 4);
+	EXPECT_EQ(End, 4);
+
+	EXPECT_EQ(str_delimiters_around_offset("", ";", 4, &Start, &End), false);
+	EXPECT_EQ(Start, 0);
+	EXPECT_EQ(End, 0);
+}
+
+TEST(Str, StrIsNum)
+{
+	EXPECT_EQ(str_isnum('/'), false);
+	EXPECT_EQ(str_isnum('0'), true);
+	EXPECT_EQ(str_isnum('1'), true);
+	EXPECT_EQ(str_isnum('2'), true);
+	EXPECT_EQ(str_isnum('8'), true);
+	EXPECT_EQ(str_isnum('9'), true);
+	EXPECT_EQ(str_isnum(':'), false);
+	EXPECT_EQ(str_isnum(' '), false);
+}
+
+TEST(Str, StrIsAllNum)
+{
+	EXPECT_EQ(str_isallnum("/"), 0);
+	EXPECT_EQ(str_isallnum("0"), 1);
+	EXPECT_EQ(str_isallnum("1"), 1);
+	EXPECT_EQ(str_isallnum("2"), 1);
+	EXPECT_EQ(str_isallnum("8"), 1);
+	EXPECT_EQ(str_isallnum("9"), 1);
+	EXPECT_EQ(str_isallnum(":"), 0);
+	EXPECT_EQ(str_isallnum(" "), 0);
+
+	EXPECT_EQ(str_isallnum("123"), 1);
+	EXPECT_EQ(str_isallnum("123/"), 0);
+	EXPECT_EQ(str_isallnum("123:"), 0);
+}
+
 TEST(Str, Dist)
 {
 	EXPECT_EQ(str_utf8_dist("aaa", "aaa"), 0);

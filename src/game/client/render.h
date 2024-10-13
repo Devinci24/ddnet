@@ -3,11 +3,14 @@
 #ifndef GAME_CLIENT_RENDER_H
 #define GAME_CLIENT_RENDER_H
 
+#include <engine/client/enums.h>
+
 #include <base/color.h>
 #include <base/vmath.h>
 
 #include <game/client/skin.h>
 #include <game/client/ui_rect.h>
+#include <game/generated/protocol7.h>
 
 class CAnimState;
 class CSpeedupTile;
@@ -24,6 +27,8 @@ struct CEnvPointBezier;
 struct CEnvPointBezier_upstream;
 struct CMapItemGroup;
 struct CQuad;
+
+#include <game/generated/protocol.h>
 
 class CTeeRenderInfo
 {
@@ -46,6 +51,32 @@ public:
 		m_GotAirJump = true;
 		m_TeeRenderFlags = 0;
 		m_FeetFlipped = false;
+
+		for(auto &Sixup : m_aSixup)
+			Sixup.Reset();
+	}
+
+	void Apply(const CSkin *pSkin)
+	{
+		m_OriginalRenderSkin = pSkin->m_OriginalSkin;
+		m_ColorableRenderSkin = pSkin->m_ColorableSkin;
+		m_BloodColor = pSkin->m_BloodColor;
+		m_SkinMetrics = pSkin->m_Metrics;
+	}
+
+	void ApplyColors(bool CustomColoredSkin, int ColorBody, int ColorFeet)
+	{
+		m_CustomColoredSkin = CustomColoredSkin;
+		if(CustomColoredSkin)
+		{
+			m_ColorBody = color_cast<ColorRGBA>(ColorHSLA(ColorBody).UnclampLighting(ColorHSLA::DARKEST_LGT));
+			m_ColorFeet = color_cast<ColorRGBA>(ColorHSLA(ColorFeet).UnclampLighting(ColorHSLA::DARKEST_LGT));
+		}
+		else
+		{
+			m_ColorBody = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+			m_ColorFeet = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+		}
 	}
 
 	CSkin::SSkinTextures m_OriginalRenderSkin;
@@ -67,6 +98,39 @@ public:
 	{
 		return m_CustomColoredSkin ? m_ColorableRenderSkin.m_Body.IsValid() : m_OriginalRenderSkin.m_Body.IsValid();
 	}
+
+	class CSixup
+	{
+	public:
+		void Reset()
+		{
+			for(auto &Texture : m_aTextures)
+				Texture = IGraphics::CTextureHandle();
+			m_BotTexture = IGraphics::CTextureHandle();
+			for(ColorRGBA &PartColor : m_aColors)
+			{
+				PartColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+			}
+			m_HatSpriteIndex = 0;
+			m_BotColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+		}
+		bool Valid() const
+		{
+			for(const auto &Texture : m_aTextures)
+				if(!Texture.IsValid())
+					return false;
+			return true;
+		}
+
+		IGraphics::CTextureHandle m_aTextures[protocol7::NUM_SKINPARTS];
+		ColorRGBA m_aColors[protocol7::NUM_SKINPARTS];
+		IGraphics::CTextureHandle m_HatTexture;
+		IGraphics::CTextureHandle m_BotTexture;
+		int m_HatSpriteIndex;
+		ColorRGBA m_BotColor;
+	};
+
+	CSixup m_aSixup[NUM_DUMMIES];
 };
 
 // Tee Render Flags
@@ -74,6 +138,7 @@ enum
 {
 	TEE_EFFECT_FROZEN = 1,
 	TEE_NO_WEAPON = 2,
+	TEE_EFFECT_SPARKLE = 4,
 };
 
 // sprite renderings
@@ -129,14 +194,19 @@ class CRenderTools
 	static void GetRenderTeeBodyScale(float BaseSize, float &BodyScale);
 	static void GetRenderTeeFeetScale(float BaseSize, float &FeetScaleWidth, float &FeetScaleHeight);
 
+	void SelectSprite(const CDataSprite *pSprite, int Flags) const;
+
+	void RenderTee6(const CAnimState *pAnim, const CTeeRenderInfo *pInfo, int Emote, vec2 Dir, vec2 Pos, float Alpha = 1.0f) const;
+	void RenderTee7(const CAnimState *pAnim, const CTeeRenderInfo *pInfo, int Emote, vec2 Dir, vec2 Pos, float Alpha = 1.0f) const;
+
 public:
 	class IGraphics *Graphics() const { return m_pGraphics; }
 	class ITextRender *TextRender() const { return m_pTextRender; }
 
 	void Init(class IGraphics *pGraphics, class ITextRender *pTextRender);
 
-	void SelectSprite(CDataSprite *pSprite, int Flags = 0, int sx = 0, int sy = 0) const;
-	void SelectSprite(int Id, int Flags = 0, int sx = 0, int sy = 0) const;
+	void SelectSprite(int Id, int Flags = 0) const;
+	void SelectSprite7(int Id, int Flags = 0) const;
 
 	void GetSpriteScale(const CDataSprite *pSprite, float &ScaleX, float &ScaleY) const;
 	void GetSpriteScale(int Id, float &ScaleX, float &ScaleY) const;
@@ -170,6 +240,8 @@ public:
 	// render a rectangle made of IndexIn tiles, over a background made of IndexOut tiles
 	// the rectangle include all tiles in [RectX, RectX+RectW-1] x [RectY, RectY+RectH-1]
 	void RenderTileRectangle(int RectX, int RectY, int RectW, int RectH, unsigned char IndexIn, unsigned char IndexOut, float Scale, ColorRGBA Color, int RenderFlags) const;
+
+	void RenderTile(int x, int y, unsigned char Index, float Scale, ColorRGBA Color) const;
 
 	// helpers
 	void CalcScreenParams(float Aspect, float Zoom, float *pWidth, float *pHeight);

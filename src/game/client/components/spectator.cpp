@@ -135,7 +135,7 @@ void CSpectator::ConSpectateClosest(IConsole::IResult *pResult, void *pUserData)
 	int ClosestDistance = std::numeric_limits<int>::max();
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
-		if(i == SpectatorId || !Snap.m_apPlayerInfos[i] || Snap.m_apPlayerInfos[i]->m_Team == TEAM_SPECTATORS || (SpectatorId == SPEC_FREEVIEW && i == Snap.m_LocalClientId))
+		if(i == SpectatorId || !Snap.m_aCharacters[i].m_Active || !Snap.m_apPlayerInfos[i] || Snap.m_apPlayerInfos[i]->m_Team == TEAM_SPECTATORS || (SpectatorId == SPEC_FREEVIEW && i == Snap.m_LocalClientId))
 			continue;
 		const CNetObj_Character &MaybeClosestCharacter = Snap.m_aCharacters[i].m_Cur;
 		int Distance = distance(CurPosition, vec2(MaybeClosestCharacter.m_X, MaybeClosestCharacter.m_Y));
@@ -164,7 +164,6 @@ CSpectator::CSpectator()
 {
 	m_SelectorMouse = vec2(0.0f, 0.0f);
 	OnReset();
-	m_OldMouseX = m_OldMouseY = 0.0f;
 }
 
 void CSpectator::OnConsoleInit()
@@ -185,6 +184,33 @@ bool CSpectator::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 	Ui()->ConvertMouseMove(&x, &y, CursorType);
 	m_SelectorMouse += vec2(x, y);
 	return true;
+}
+
+bool CSpectator::OnInput(const IInput::CEvent &Event)
+{
+	if(IsActive() && Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE)
+	{
+		OnRelease();
+		return true;
+	}
+
+	if(g_Config.m_ClSpectatorMouseclicks)
+	{
+		if(m_pClient->m_Snap.m_SpecInfo.m_Active && !IsActive() && !GameClient()->m_MultiViewActivated &&
+			!Ui()->IsPopupOpen() && m_pClient->m_GameConsole.IsClosed() && !m_pClient->m_Menus.IsActive())
+		{
+			if(Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_MOUSE_1)
+			{
+				if(m_pClient->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW)
+					Spectate(SPEC_FREEVIEW);
+				else
+					SpectateClosest();
+				return true;
+			}
+		}
+	}
+
+	return false;
 }
 
 void CSpectator::OnRelease()
@@ -233,24 +259,6 @@ void CSpectator::OnRender()
 		return;
 	}
 
-	if(m_SelectedSpectatorId != NO_SELECTION)
-	{
-		// clicking a component
-		if(m_Clicked)
-		{
-			if(!GameClient()->m_MultiViewActivated)
-				Spectate(m_SelectedSpectatorId);
-
-			if(m_SelectedSpectatorId == MULTI_VIEW)
-				GameClient()->m_MultiViewActivated = true;
-			else if(m_SelectedSpectatorId == SPEC_FREEVIEW || m_SelectedSpectatorId == SPEC_FOLLOW)
-				GameClient()->m_MultiViewActivated = false;
-
-			if(!GameClient()->m_MultiViewActivated && m_SelectedSpectatorId >= 0 && m_SelectedSpectatorId < MAX_CLIENTS)
-				m_Clicked = false;
-		}
-	}
-
 	if(!m_pClient->m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 	{
 		m_Active = false;
@@ -271,7 +279,6 @@ void CSpectator::OnRender()
 	float LineHeight = 60.0f;
 	float TeeSizeMod = 1.0f;
 	float RoundRadius = 30.0f;
-	bool Selected = false;
 	bool MultiViewSelected = false;
 	int TotalPlayers = 0;
 	int PerLine = 8;
@@ -286,7 +293,17 @@ void CSpectator::OnRender()
 		++TotalPlayers;
 	}
 
-	if(TotalPlayers > 32)
+	if(TotalPlayers > 64)
+	{
+		FontSize = 12.0f;
+		LineHeight = 15.0f;
+		TeeSizeMod = 0.3f;
+		PerLine = 32;
+		RoundRadius = 5.0f;
+		BoxMove = 3.0f;
+		BoxOffset = 6.0f;
+	}
+	else if(TotalPlayers > 32)
 	{
 		FontSize = 18.0f;
 		LineHeight = 30.0f;
@@ -301,13 +318,41 @@ void CSpectator::OnRender()
 		ObjWidth = 600.0f;
 	}
 
+	const vec2 ScreenSize = vec2(Width, Height);
+	const vec2 ScreenCenter = ScreenSize / 2.0f;
+	CUIRect SpectatorRect = {Width / 2.0f - ObjWidth, Height / 2.0f - 300.0f, ObjWidth * 2.0f, 600.0f};
+	CUIRect SpectatorMouseRect;
+	SpectatorRect.Margin(20.0f, &SpectatorMouseRect);
+
+	const bool WasTouchPressed = m_TouchState.m_AnyPressed;
+	Ui()->UpdateTouchState(m_TouchState);
+	if(m_TouchState.m_AnyPressed)
+	{
+		const vec2 TouchPos = (m_TouchState.m_PrimaryPosition - vec2(0.5f, 0.5f)) * ScreenSize;
+		if(SpectatorMouseRect.Inside(ScreenCenter + TouchPos))
+		{
+			m_SelectorMouse = TouchPos;
+		}
+	}
+	else if(WasTouchPressed)
+	{
+		const vec2 TouchPos = (m_TouchState.m_PrimaryPosition - vec2(0.5f, 0.5f)) * ScreenSize;
+		if(!SpectatorRect.Inside(ScreenCenter + TouchPos))
+		{
+			OnRelease();
+			return;
+		}
+	}
+
 	Graphics()->MapScreen(0, 0, Width, Height);
 
-	Graphics()->DrawRect(Width / 2.0f - ObjWidth, Height / 2.0f - 300.0f, ObjWidth * 2, 600.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_ALL, 20.0f);
+	SpectatorRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_ALL, 20.0f);
 
 	// clamp mouse position to selector area
 	m_SelectorMouse.x = clamp(m_SelectorMouse.x, -(ObjWidth - 20.0f), ObjWidth - 20.0f);
 	m_SelectorMouse.y = clamp(m_SelectorMouse.y, -280.0f, 280.0f);
+
+	const bool MousePressed = Input()->KeyPress(KEY_MOUSE_1) || m_TouchState.m_PrimaryPressed;
 
 	// draw selections
 	if((Client()->State() == IClient::STATE_DEMOPLAYBACK && m_pClient->m_DemoSpecId == SPEC_FREEVIEW) ||
@@ -326,13 +371,19 @@ void CSpectator::OnRender()
 		Graphics()->DrawRect(Width / 2.0f - (ObjWidth - 20.0f) + (ObjWidth * 2.0f * 2.0f / 3.0f), Height / 2.0f - 280.0f, ((ObjWidth * 2.0f) / 3.0f) - 40.0f, 60.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 20.0f);
 	}
 
+	bool FreeViewSelected = false;
 	if(m_SelectorMouse.x >= -(ObjWidth - 20.0f) && m_SelectorMouse.x <= -(ObjWidth - 20.0f) + ((ObjWidth * 2.0f) / 3.0f) - 40.0f &&
 		m_SelectorMouse.y >= -280.0f && m_SelectorMouse.y <= -220.0f)
 	{
 		m_SelectedSpectatorId = SPEC_FREEVIEW;
-		Selected = true;
+		FreeViewSelected = true;
+		if(MousePressed)
+		{
+			GameClient()->m_MultiViewActivated = false;
+			Spectate(m_SelectedSpectatorId);
+		}
 	}
-	TextRender()->TextColor(1.0f, 1.0f, 1.0f, Selected ? 1.0f : 0.5f);
+	TextRender()->TextColor(1.0f, 1.0f, 1.0f, FreeViewSelected ? 1.0f : 0.5f);
 	TextRender()->Text(Width / 2.0f - (ObjWidth - 40.0f), Height / 2.0f - 280.f + (60.f - BigFontSize) / 2.f, BigFontSize, Localize("Free-View"), -1.0f);
 
 	if(m_SelectorMouse.x >= -(ObjWidth - 20.0f) + (ObjWidth * 2.0f / 3.0f) && m_SelectorMouse.x <= -(ObjWidth - 20.0f) + (ObjWidth * 2.0f / 3.0f) + ((ObjWidth * 2.0f) / 3.0f) - 40.0f &&
@@ -340,20 +391,29 @@ void CSpectator::OnRender()
 	{
 		m_SelectedSpectatorId = MULTI_VIEW;
 		MultiViewSelected = true;
+		if(MousePressed)
+		{
+			GameClient()->m_MultiViewActivated = true;
+		}
 	}
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, MultiViewSelected ? 1.0f : 0.5f);
 	TextRender()->Text(Width / 2.0f - (ObjWidth - 40.0f) + (ObjWidth * 2.0f / 3.0f), Height / 2.0f - 280.f + (60.f - BigFontSize) / 2.f, BigFontSize, Localize("Multi-View"), -1.0f);
 
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK && m_pClient->m_Snap.m_LocalClientId >= 0)
 	{
-		Selected = false;
+		bool FollowSelected = false;
 		if(m_SelectorMouse.x >= -(ObjWidth - 20.0f) + (ObjWidth * 2.0f * 2.0f / 3.0f) && m_SelectorMouse.x <= -(ObjWidth - 20.0f) + (ObjWidth * 2.0f * 2.0f / 3.0f) + ((ObjWidth * 2.0f) / 3.0f) - 40.0f &&
 			m_SelectorMouse.y >= -280.0f && m_SelectorMouse.y <= -220.0f)
 		{
 			m_SelectedSpectatorId = SPEC_FOLLOW;
-			Selected = true;
+			FollowSelected = true;
+			if(MousePressed)
+			{
+				GameClient()->m_MultiViewActivated = false;
+				Spectate(m_SelectedSpectatorId);
+			}
 		}
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, Selected ? 1.0f : 0.5f);
+		TextRender()->TextColor(1.0f, 1.0f, 1.0f, FollowSelected ? 1.0f : 0.5f);
 		TextRender()->Text(Width / 2.0f - (ObjWidth - 40.0f) + (ObjWidth * 2.0f * 2.0f / 3.0f), Height / 2.0f - 280.0f + (60.f - BigFontSize) / 2.f, BigFontSize, Localize("Follow"), -1.0f);
 	}
 
@@ -421,35 +481,41 @@ void CSpectator::OnRender()
 			Graphics()->DrawRect(Width / 2.0f + x - 10.0f + BoxOffset, Height / 2.0f + y + BoxMove, 270.0f - BoxOffset, LineHeight, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, RoundRadius);
 		}
 
-		Selected = false;
+		bool PlayerSelected = false;
 		if(m_SelectorMouse.x >= x - 10.0f && m_SelectorMouse.x < x + 260.0f &&
 			m_SelectorMouse.y >= y - (LineHeight / 6.0f) && m_SelectorMouse.y < y + (LineHeight * 5.0f / 6.0f))
 		{
 			m_SelectedSpectatorId = m_pClient->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId;
-			Selected = true;
-			if(GameClient()->m_MultiViewActivated && m_Clicked)
+			PlayerSelected = true;
+			if(MousePressed)
 			{
-				if(GameClient()->m_MultiViewTeam == DDTeam)
+				if(GameClient()->m_MultiViewActivated)
 				{
-					GameClient()->m_aMultiViewId[m_SelectedSpectatorId] = !GameClient()->m_aMultiViewId[m_SelectedSpectatorId];
-					if(!GameClient()->m_aMultiViewId[m_pClient->m_Snap.m_SpecInfo.m_SpectatorId])
+					if(GameClient()->m_MultiViewTeam == DDTeam)
 					{
-						int NewClientId = GameClient()->FindFirstMultiViewId();
-						if(NewClientId < MAX_CLIENTS && NewClientId >= 0)
+						GameClient()->m_aMultiViewId[m_SelectedSpectatorId] = !GameClient()->m_aMultiViewId[m_SelectedSpectatorId];
+						if(!GameClient()->m_aMultiViewId[m_pClient->m_Snap.m_SpecInfo.m_SpectatorId])
 						{
-							GameClient()->CleanMultiViewId(NewClientId);
-							GameClient()->m_aMultiViewId[NewClientId] = true;
-							Spectate(NewClientId);
+							int NewClientId = GameClient()->FindFirstMultiViewId();
+							if(NewClientId < MAX_CLIENTS && NewClientId >= 0)
+							{
+								GameClient()->CleanMultiViewId(NewClientId);
+								GameClient()->m_aMultiViewId[NewClientId] = true;
+								Spectate(NewClientId);
+							}
 						}
+					}
+					else
+					{
+						GameClient()->ResetMultiView();
+						Spectate(m_SelectedSpectatorId);
+						m_MultiViewActivateDelay = Client()->LocalTime() + 0.3f;
 					}
 				}
 				else
 				{
-					GameClient()->ResetMultiView();
 					Spectate(m_SelectedSpectatorId);
-					m_MultiViewActivateDelay = Client()->LocalTime() + 0.3f;
 				}
-				m_Clicked = false;
 			}
 		}
 		float TeeAlpha;
@@ -461,21 +527,30 @@ void CSpectator::OnRender()
 		}
 		else
 		{
-			TextRender()->TextColor(1.0f, 1.0f, 1.0f, Selected ? 1.0f : 0.5f);
+			TextRender()->TextColor(1.0f, 1.0f, 1.0f, PlayerSelected ? 1.0f : 0.5f);
 			TeeAlpha = 1.0f;
 		}
-		TextRender()->Text(Width / 2.0f + x + 50.0f, Height / 2.0f + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize, m_pClient->m_aClients[m_pClient->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId].m_aName, 220.0f);
+		CTextCursor NameCursor;
+		TextRender()->SetCursor(&NameCursor, Width / 2.0f + x + 50.0f, Height / 2.0f + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize, TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END);
+		NameCursor.m_LineWidth = 180.0f;
+		if(g_Config.m_ClShowIds)
+		{
+			char aClientId[16];
+			GameClient()->FormatClientId(m_pClient->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId, aClientId, EClientIdFormat::INDENT_AUTO);
+			TextRender()->TextEx(&NameCursor, aClientId);
+		}
+		TextRender()->TextEx(&NameCursor, m_pClient->m_aClients[m_pClient->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId].m_aName);
 
 		if(GameClient()->m_MultiViewActivated)
 		{
 			if(GameClient()->m_aMultiViewId[m_pClient->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId])
 			{
-				TextRender()->TextColor(0.1f, 1.0f, 0.1f, Selected ? 1.0f : 0.5f);
+				TextRender()->TextColor(0.1f, 1.0f, 0.1f, PlayerSelected ? 1.0f : 0.5f);
 				TextRender()->Text(Width / 2.0f + x + 50.0f + 180.0f, Height / 2.0f + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize - 3, "⬤", 220.0f);
 			}
 			else if(GameClient()->m_MultiViewTeam == DDTeam)
 			{
-				TextRender()->TextColor(1.0f, 0.1f, 0.1f, Selected ? 1.0f : 0.5f);
+				TextRender()->TextColor(1.0f, 0.1f, 0.1f, PlayerSelected ? 1.0f : 0.5f);
 				TextRender()->Text(Width / 2.0f + x + 50.0f + 180.0f, Height / 2.0f + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize - 3, "◯", 220.0f);
 			}
 		}
@@ -521,7 +596,7 @@ void CSpectator::OnRender()
 	}
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 
-	RenderTools()->RenderCursor(m_SelectorMouse + vec2(Width, Height) / 2, 48.0f);
+	RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse, 48.0f);
 }
 
 void CSpectator::OnReset()
@@ -545,6 +620,22 @@ void CSpectator::Spectate(int SpectatorId)
 	if(m_pClient->m_Snap.m_SpecInfo.m_SpectatorId == SpectatorId)
 		return;
 
+	if(Client()->IsSixup())
+	{
+		protocol7::CNetMsg_Cl_SetSpectatorMode Msg;
+		if(SpectatorId == SPEC_FREEVIEW)
+		{
+			Msg.m_SpecMode = protocol7::SPEC_FREEVIEW;
+			Msg.m_SpectatorId = -1;
+		}
+		else
+		{
+			Msg.m_SpecMode = protocol7::SPEC_PLAYER;
+			Msg.m_SpectatorId = SpectatorId;
+		}
+		Client()->SendPackMsgActive(&Msg, MSGFLAG_VITAL, true);
+		return;
+	}
 	CNetMsg_Cl_SetSpectatorMode Msg;
 	Msg.m_SpectatorId = SpectatorId;
 	Client()->SendPackMsgActive(&Msg, MSGFLAG_VITAL);
@@ -553,19 +644,4 @@ void CSpectator::Spectate(int SpectatorId)
 void CSpectator::SpectateClosest()
 {
 	ConSpectateClosest(NULL, this);
-}
-
-bool CSpectator::OnInput(const IInput::CEvent &Event)
-{
-	if(m_Active && Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_MOUSE_1)
-	{
-		m_Clicked = true;
-		return true;
-	}
-	else if(Event.m_Flags & IInput::FLAG_RELEASE && Event.m_Key == KEY_MOUSE_1)
-	{
-		m_Clicked = false;
-		return false;
-	}
-	return false;
 }

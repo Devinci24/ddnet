@@ -76,10 +76,10 @@ Client
 == Kliens
 
 Connecting to
-== Csatlakozás...
+== Csatlakozás…
 
-Connection Problems...
-== Csatlakozási problémák...
+Connection Problems…
+== Csatlakozási problémák…
 
 Console
 == Konzol
@@ -112,7 +112,7 @@ Disconnected
 == Lekapcsolódott
 
 Downloading map
-== Pálya letöltése...
+== Pálya letöltése…
 
 Draw!
 == Döntetlen!
@@ -269,9 +269,6 @@ Pistol
 
 Player
 == Játékos
-
-Player options
-== Játékosok kezelése
 
 Players
 == Játékosok
@@ -477,9 +474,6 @@ Your skin
 Reset to defaults
 == Visszaállítás alapértelmezettre
 
-Round
-== Menet
-
 Lht.
 == Fényerősség
 
@@ -639,8 +633,8 @@ Enable long pain sound (used when shooting in freeze)
 DDNet %s is available:
 == DDNet %s verzió elérhető
 
-Updating...
-== Frissítés...
+Updating…
+== Frissítés…
 
 Overlay entities
 == Entitás láthatósága
@@ -693,9 +687,6 @@ Max CSVs
 Strict gametype filter
 == Szigorú játékmód szűrő
 
-Use DDRace Scoreboard
-== DDRace pontszámtábla használata
-
 Best
 == Legjobb
 
@@ -712,7 +703,7 @@ Search
 == Keresés
 
 Connecting dummy
-== Másolat válasza...
+== Másolat válasza…
 
 Clan plates size
 == Klán felirat mérete
@@ -795,9 +786,6 @@ Show DDNet map finishes in server browser
 transmits your player name to info.ddnet.org
 == továbbítja a játékosnevedet az info.ddnet.org oldalra
 
-Reload
-== Újratöltés
-
 Hammerfly dummy
 == Másolat kalapácsolás
 
@@ -876,8 +864,8 @@ Converse
 Use high DPI
 == Magas DPI használata
 
-Update failed! Check log...
-== Frissítés sikertelen! nézd meg a log-ot...
+Update failed! Check log…
+== Frissítés sikertelen! nézd meg a log-ot…
 
 Toggle dyncam
 == Dinamikus kamera
@@ -1066,9 +1054,6 @@ Auto
 Replay
 == Visszajátszás
 
-The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
-== Ennek a Textúrának szélessége, vagy magassága (%s) nem megfelelően osztható el ezzel a számmal: (%d), ami vizuális hibákhoz vezethet. (Méretek máshogyan fognak kinézni és a teljesítményt is ronthatja.)
-
 Getting server list from master server
 == Szerverlista lekérése a fő szerverekről
 
@@ -1210,8 +1195,8 @@ Speed:
 Angle:
 == Szög:
 
-Trying to determine UDP connectivity...
-== Próbáljuk meghatározni az UDP kapcsoltatot...
+Trying to determine UDP connectivity…
+== Próbáljuk meghatározni az UDP kapcsoltatot…
 
 UDP seems to be filtered.
 == Az UDP szűrve van.
@@ -1344,9 +1329,6 @@ Show health, shields and ammo
 DDRace HUD
 == DDRace HUD
 
-Show client IDs in scoreboard
-== Mutassa a kliensek ID-ét a pontszámtáblán
-
 Show DDRace HUD
 == Mutassa a DDRace HUD-ot (Speciális HUD)
 
@@ -1358,9 +1340,6 @@ Show freeze bars
 
 Opacity of freeze bars inside freeze
 == Láthatósága a töltő csíknak, mikor levan fagyaztva a Tee
-
-Show hook strength indicator
-== Horog erősségi indikátor mutatása
 
 Hook collision line
 == Horog érintkező vonal indikátora
@@ -1560,6 +1539,15 @@ Unregister protocol and file extensions
 Open the directory to add custom assets
 == Megnyitni az egyedi Képek helyét
 
+Could not resolve connect address '%s'. See local console for details.
+== 
+
+Connect address error
+== 
+
+Could not connect dummy
+== 
+
 Error playing demo
 == 
 
@@ -1570,6 +1558,12 @@ Saving settings to '%s' failed
 == 
 
 Error saving settings
+== 
+
+The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
+== 
+
+Loading demo file from storage
 == 
 
 Quitting. Please wait…
@@ -1611,6 +1605,10 @@ Loading commands…
 Multi-View
 == 
 
+[Spectating]
+Following %s
+== 
+
 Some map images could not be loaded. Check the local console for details.
 == 
 
@@ -1635,6 +1633,12 @@ Render complete
 Are you sure that you want to restart?
 == 
 
+Save skin
+== 
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
+== 
+
 There's an unsaved map in the editor, you might want to save it.
 == 
 
@@ -1657,6 +1661,24 @@ Videos directory
 == 
 
 Video was saved to '%s'
+== 
+
+Unable to save the skin
+== 
+
+Unable to save the skin with a reserved name
+== 
+
+%d/%d KiB (%.1f KiB/s)
+== 
+
+No local servers found (ports %d-%d)
+== 
+
+Example of usage
+== 
+
+No login required
 == 
 
 Communities
@@ -1765,6 +1787,12 @@ Delete folder
 Unable to delete the folder '%s'. Make sure it's empty first.
 == 
 
+Dummy is not allowed on this server
+== 
+
+Please wait…
+== 
+
 Loading…
 == 
 
@@ -1777,10 +1805,20 @@ Activate all
 Deactivate all
 == 
 
+[Hertz]
+Hz
+== 
+
+Player info change cooldown
+== 
+
 Axis
 == 
 
 Graphics card
+== 
+
+Tee
 == 
 
 Info Messages
@@ -1789,16 +1827,43 @@ Info Messages
 Show local time always
 == 
 
+Show client IDs (scoreboard, chat, spectator)
+== 
+
+Always show chat
+== 
+
+Show only chat messages from team members
+== 
+
 Chat font size
 == 
 
 Chat width
 == 
 
+Show friend mark (♥) in name plates
+== 
+
+Show hook strength icon indicator
+== 
+
+Show hook strength number indicator
+== 
+
 Authed name color in scoreboard
 == 
 
 Same clan color in scoreboard
+== 
+
+Show own player's hook collision line
+== 
+
+Always show own player's hook collision line
+== 
+
+Always show other players' hook collision lines
 == 
 
 Show finish messages
@@ -1816,5 +1881,61 @@ Regular background color
 Entities background color
 == 
 
+Basic
+== 
+
+Custom
+== 
+
+Are you sure that you want to delete '%s'?
+== 
+
+Delete skin
+== 
+
+Unable to delete skin
+== 
+
+Round %d/%d
+== 
+
+[Spectators]
+%d others…
+== 
+
+[Team and size]
+%d\n(%d/%d)
+== 
+
+Team %d (%d/%d)
+== 
+
+[skins]
+Body
+== 
+
+[skins]
+Marking
+== 
+
+[skins]
+Decoration
+== 
+
+[skins]
+Hands
+== 
+
+[skins]
+Feet
+== 
+
+[skins]
+Eyes
+== 
+
 Moved ingame
+== 
+
+https://wiki.ddnet.org/wiki/Mapping
 == 

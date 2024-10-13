@@ -28,7 +28,7 @@ void CGameTeams::Reset()
 		SendTeamsState(i);
 	}
 
-	for(int i = 0; i < NUM_TEAMS; ++i)
+	for(int i = 0; i < NUM_DDRACE_TEAMS; ++i)
 	{
 		m_aTeamState[i] = TEAMSTATE_EMPTY;
 		m_aTeamLocked[i] = false;
@@ -172,7 +172,7 @@ void CGameTeams::OnCharacterStart(int ClientId)
 			}
 		}
 
-		if(g_Config.m_SvTeam < SV_TEAM_FORCED_SOLO && g_Config.m_SvMaxTeamSize != 2 && g_Config.m_SvPauseable)
+		if(g_Config.m_SvTeam != SV_TEAM_FORCED_SOLO && g_Config.m_SvMaxTeamSize != 2 && g_Config.m_SvPauseable)
 		{
 			for(int i = 0; i < MAX_CLIENTS; ++i)
 			{
@@ -193,13 +193,13 @@ void CGameTeams::OnCharacterFinish(int ClientId)
 		CPlayer *pPlayer = GetPlayer(ClientId);
 		if(pPlayer && pPlayer->IsPlaying())
 		{
-			float Time = (float)(Server()->Tick() - GetStartTime(pPlayer)) / ((float)Server()->TickSpeed());
-			if(Time < 0.000001f)
+			int TimeTicks = Server()->Tick() - GetStartTime(pPlayer);
+			if(TimeTicks <= 0)
 				return;
 			char aTimestamp[TIMESTAMP_STR_LENGTH];
 			str_timestamp_format(aTimestamp, sizeof(aTimestamp), FORMAT_SPACE); // 2019-04-02 19:41:58
 
-			OnFinish(pPlayer, Time, aTimestamp);
+			OnFinish(pPlayer, TimeTicks, aTimestamp);
 		}
 	}
 	else
@@ -335,8 +335,9 @@ void CGameTeams::CheckTeamFinished(int Team)
 
 		if(PlayersCount > 0)
 		{
-			float Time = (float)(Server()->Tick() - GetStartTime(apTeamPlayers[0])) / ((float)Server()->TickSpeed());
-			if(Time < 0.000001f)
+			int TimeTicks = Server()->Tick() - GetStartTime(apTeamPlayers[0]);
+			float Time = (float)TimeTicks / (float)Server()->TickSpeed();
+			if(TimeTicks <= 0)
 			{
 				return;
 			}
@@ -345,10 +346,13 @@ void CGameTeams::CheckTeamFinished(int Team)
 			{
 				ChangeTeamState(Team, TEAMSTATE_FINISHED);
 
+				int min = (int)Time / 60;
+				float sec = Time - (min * 60.0f);
+
 				char aBuf[256];
 				str_format(aBuf, sizeof(aBuf),
 					"Your team would've finished in: %d minute(s) %5.2f second(s). Since you had practice mode enabled your rank doesn't count.",
-					(int)Time / 60, Time - ((int)Time / 60 * 60));
+					min, sec);
 				GameServer()->SendChatTeam(Team, aBuf);
 
 				for(unsigned int i = 0; i < PlayersCount; ++i)
@@ -363,9 +367,9 @@ void CGameTeams::CheckTeamFinished(int Team)
 			str_timestamp_format(aTimestamp, sizeof(aTimestamp), FORMAT_SPACE); // 2019-04-02 19:41:58
 
 			for(unsigned int i = 0; i < PlayersCount; ++i)
-				OnFinish(apTeamPlayers[i], Time, aTimestamp);
+				OnFinish(apTeamPlayers[i], TimeTicks, aTimestamp);
 			ChangeTeamState(Team, TEAMSTATE_FINISHED); // TODO: Make it better
-			OnTeamFinish(apTeamPlayers, PlayersCount, Time, aTimestamp);
+			OnTeamFinish(Team, apTeamPlayers, PlayersCount, TimeTicks, aTimestamp);
 		}
 	}
 }
@@ -503,7 +507,7 @@ bool CGameTeams::TeamFinished(int Team)
 	return true;
 }
 
-CClientMask CGameTeams::TeamMask(int Team, int ExceptId, int Asker)
+CClientMask CGameTeams::TeamMask(int Team, int ExceptId, int Asker, int VersionFlags)
 {
 	if(Team == TEAM_SUPER)
 	{
@@ -519,6 +523,9 @@ CClientMask CGameTeams::TeamMask(int Team, int ExceptId, int Asker)
 			continue; // Explicitly excluded
 		if(!GetPlayer(i))
 			continue; // Player doesn't exist
+		if(!((Server()->IsSixup(i) && (VersionFlags & CGameContext::FLAG_SIXUP)) ||
+			   (!Server()->IsSixup(i) && (VersionFlags & CGameContext::FLAG_SIX))))
+			continue;
 
 		if(!(GetPlayer(i)->GetTeam() == TEAM_SPECTATORS || GetPlayer(i)->IsPaused()))
 		{ // Not spectator
@@ -666,7 +673,7 @@ float *CGameTeams::GetCurrentTimeCp(CPlayer *Player)
 	return NULL;
 }
 
-void CGameTeams::OnTeamFinish(CPlayer **Players, unsigned int Size, float Time, const char *pTimestamp)
+void CGameTeams::OnTeamFinish(int Team, CPlayer **Players, unsigned int Size, int TimeTicks, const char *pTimestamp)
 {
 	int aPlayerCids[MAX_CLIENTS];
 
@@ -680,18 +687,21 @@ void CGameTeams::OnTeamFinish(CPlayer **Players, unsigned int Size, float Time, 
 			char aBuf[512];
 			str_format(aBuf, sizeof(aBuf), "'%s' joined team 0",
 				GameServer()->Server()->ClientName(Players[i]->GetCid()));
-			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+			GameServer()->SendChat(-1, TEAM_ALL, aBuf);
 		}
 	}
 
 	if(Size >= (unsigned int)g_Config.m_SvMinTeamSize)
-		GameServer()->Score()->SaveTeamScore(aPlayerCids, Size, Time, pTimestamp);
+		GameServer()->Score()->SaveTeamScore(Team, aPlayerCids, Size, TimeTicks, pTimestamp);
 }
 
-void CGameTeams::OnFinish(CPlayer *Player, float Time, const char *pTimestamp)
+void CGameTeams::OnFinish(CPlayer *Player, int TimeTicks, const char *pTimestamp)
 {
 	if(!Player || !Player->IsPlaying())
 		return;
+
+	float Time = TimeTicks / (float)Server()->TickSpeed();
+
 	// TODO:DDRace:btd: this ugly
 	const int ClientId = Player->GetCid();
 	CPlayerData *pData = GameServer()->Score()->PlayerData(ClientId);
@@ -704,9 +714,9 @@ void CGameTeams::OnFinish(CPlayer *Player, float Time, const char *pTimestamp)
 		Server()->ClientName(ClientId), (int)Time / 60,
 		Time - ((int)Time / 60 * 60));
 	if(g_Config.m_SvHideScore || !g_Config.m_SvSaveWorseScores)
-		GameServer()->SendChatTarget(ClientId, aBuf, CGameContext::CHAT_SIX);
+		GameServer()->SendChatTarget(ClientId, aBuf, CGameContext::FLAG_SIX);
 	else
-		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf, -1., CGameContext::CHAT_SIX);
+		GameServer()->SendChat(-1, TEAM_ALL, aBuf, -1., CGameContext::FLAG_SIX);
 
 	float Diff = absolute(Time - pData->m_BestTime);
 
@@ -723,9 +733,9 @@ void CGameTeams::OnFinish(CPlayer *Player, float Time, const char *pTimestamp)
 			str_format(aBuf, sizeof(aBuf), "New record: %5.2f second(s) better.",
 				Diff);
 		if(g_Config.m_SvHideScore || !g_Config.m_SvSaveWorseScores)
-			GameServer()->SendChatTarget(ClientId, aBuf, CGameContext::CHAT_SIX);
+			GameServer()->SendChatTarget(ClientId, aBuf, CGameContext::FLAG_SIX);
 		else
-			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf, -1, CGameContext::CHAT_SIX);
+			GameServer()->SendChat(-1, TEAM_ALL, aBuf, -1, CGameContext::FLAG_SIX);
 	}
 	else if(pData->m_BestTime != 0) // tee has already finished?
 	{
@@ -745,7 +755,7 @@ void CGameTeams::OnFinish(CPlayer *Player, float Time, const char *pTimestamp)
 				str_format(aBuf, sizeof(aBuf),
 					"%5.2f second(s) worse, better luck next time.",
 					Diff);
-			GameServer()->SendChatTarget(ClientId, aBuf, CGameContext::CHAT_SIX); // this is private, sent only to the tee
+			GameServer()->SendChatTarget(ClientId, aBuf, CGameContext::FLAG_SIX); // this is private, sent only to the tee
 		}
 	}
 	else
@@ -804,7 +814,7 @@ void CGameTeams::OnFinish(CPlayer *Player, float Time, const char *pTimestamp)
 
 	if(CallSaveScore)
 		if(g_Config.m_SvNamelessScore || !str_startswith(Server()->ClientName(ClientId), "nameless tee"))
-			GameServer()->Score()->SaveScore(ClientId, Time, pTimestamp,
+			GameServer()->Score()->SaveScore(ClientId, TimeTicks, pTimestamp,
 				GetCurrentTimeCp(Player), Player->m_NotEligibleForFinish);
 
 	bool NeedToSendNewServerRecord = false;
@@ -844,6 +854,10 @@ void CGameTeams::OnFinish(CPlayer *Player, float Time, const char *pTimestamp)
 	{
 		Player->m_Score = TTime;
 	}
+
+	// Confetti
+	CCharacter *pChar = Player->GetCharacter();
+	m_pGameContext->CreateFinishEffect(pChar->m_Pos, pChar->TeamMask());
 }
 
 void CGameTeams::RequestTeamSwap(CPlayer *pPlayer, CPlayer *pTargetPlayer, int Team)
@@ -947,7 +961,8 @@ void CGameTeams::SwapTeamCharacters(CPlayer *pPrimaryPlayer, CPlayer *pTargetPla
 	}
 	std::swap(m_aTeeStarted[pPrimaryPlayer->GetCid()], m_aTeeStarted[pTargetPlayer->GetCid()]);
 	std::swap(m_aTeeFinished[pPrimaryPlayer->GetCid()], m_aTeeFinished[pTargetPlayer->GetCid()]);
-	std::swap(pPrimaryPlayer->GetCharacter()->GetRescueTeeRef(), pTargetPlayer->GetCharacter()->GetRescueTeeRef());
+	std::swap(pPrimaryPlayer->GetCharacter()->GetLastRescueTeeRef(RESCUEMODE_AUTO), pTargetPlayer->GetCharacter()->GetLastRescueTeeRef(RESCUEMODE_AUTO));
+	std::swap(pPrimaryPlayer->GetCharacter()->GetLastRescueTeeRef(RESCUEMODE_MANUAL), pTargetPlayer->GetCharacter()->GetLastRescueTeeRef(RESCUEMODE_MANUAL));
 
 	GameServer()->m_World.SwapClients(pPrimaryPlayer->GetCid(), pTargetPlayer->GetCid());
 
@@ -965,7 +980,7 @@ void CGameTeams::SwapTeamCharacters(CPlayer *pPrimaryPlayer, CPlayer *pTargetPla
 
 void CGameTeams::ProcessSaveTeam()
 {
-	for(int Team = 0; Team < NUM_TEAMS; Team++)
+	for(int Team = 0; Team < NUM_DDRACE_TEAMS; Team++)
 	{
 		if(m_apSaveTeamResult[Team] == nullptr || !m_apSaveTeamResult[Team]->m_Completed)
 			continue;
@@ -1017,11 +1032,20 @@ void CGameTeams::ProcessSaveTeam()
 					m_apSaveTeamResult[Team]->m_SaveId,
 					m_apSaveTeamResult[Team]->m_SavedTeam.GetString());
 			}
+
+			bool TeamValid = false;
 			if(Count(Team) > 0)
 			{
 				// keep current weak/strong order as on some maps there is no other way of switching
-				m_apSaveTeamResult[Team]->m_SavedTeam.Load(GameServer(), Team, true);
+				TeamValid = m_apSaveTeamResult[Team]->m_SavedTeam.Load(GameServer(), Team, true);
 			}
+
+			if(!TeamValid)
+			{
+				GameServer()->SendChatTeam(Team, "Your team has been killed because it contains an invalid tee state");
+				KillTeam(Team, -1, -1);
+			}
+
 			char aSaveId[UUID_MAXSTRSIZE];
 			FormatUuid(m_apSaveTeamResult[Team]->m_SaveId, aSaveId, UUID_MAXSTRSIZE);
 			dbg_msg("save", "Load successful: %s", aSaveId);
@@ -1097,6 +1121,15 @@ void CGameTeams::OnCharacterDeath(int ClientId, int Weapon)
 
 			if(Count(Team) > 1)
 			{
+				// Disband team if the team has more players than allowed.
+				if(Count(Team) > g_Config.m_SvMaxTeamSize)
+				{
+					GameServer()->SendChatTeam(Team, "This team was disbanded because there are more players than allowed in the team.");
+					SetTeamLock(Team, false);
+					KillTeam(Team, Weapon == WEAPON_SELF ? ClientId : -1, ClientId);
+					return;
+				}
+
 				KillTeam(Team, Weapon == WEAPON_SELF ? ClientId : -1, ClientId);
 
 				char aBuf[512];

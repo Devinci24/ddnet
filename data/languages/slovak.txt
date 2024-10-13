@@ -3,7 +3,7 @@
 #	Limit and Petr
 #modified by:
 #	LimiT		2011-07-02 20:24:44
-#	dobrykafe	2024-03-08 00:00:00
+#	dobrykafe	2024-09-29 00:00:00
 ##### /authors #####
 
 ##### translated strings #####
@@ -77,8 +77,8 @@ Client
 Connecting to
 == Pripojujem sa k
 
-Connection Problems...
-== Problémy s pripojením...
+Connection Problems…
+== Problémy s pripojením…
 
 Console
 == Konzola
@@ -277,9 +277,6 @@ Player
 
 Player country:
 == Filter krajín:
-
-Player options
-== Nastavenia hráča
 
 Players
 == Hráči
@@ -499,9 +496,6 @@ Your skin
 Reset to defaults
 == Vrátiť na pôvodné
 
-Round
-== Kolo
-
 Lht.
 == Lht.
 
@@ -611,10 +605,10 @@ Warning
 == Varovanie
 
 Quitting. Please wait…
-== Ukončovanie. Prosím, čakajte...
+== Ukončovanie. Prosím, čakajte…
 
 Restarting. Please wait…
-== Reštartovanie. Prosím, čakajte...
+== Reštartovanie. Prosím, čakajte…
 
 Loading skin files
 == Načítanie skin súborov
@@ -709,8 +703,8 @@ Settings
 Editor
 == Editor
 
-Trying to determine UDP connectivity...
-== Pokus o zistenie pripojenia UDP...
+Trying to determine UDP connectivity…
+== Pokus o zistenie pripojenia UDP…
 
 UDP seems to be filtered.
 == Zdá sa, že UDP je filtrovaný.
@@ -1423,12 +1417,6 @@ Show votes window after voting
 DDRace HUD
 == DDRace HUD
 
-Use DDRace Scoreboard
-== Použiť DDRace tabuľku výsledkov
-
-Show client IDs in scoreboard
-== Zobraziť ID klientov vo výsledkovej tabuľke
-
 Show DDRace HUD
 == Zobraziť DDRace HUD
 
@@ -1497,9 +1485,6 @@ Show clan above name plates
 
 Clan plates size
 == Veľkosť menoviek klanu
-
-Show hook strength indicator
-== Zobraziť indikátor sily háku
 
 Show other players' key presses
 == Zobraziť stlačenie klávesov ostatných hráčov
@@ -1657,9 +1642,6 @@ Regular background color
 Entities background color
 == Farba pozadia entít
 
-Reload
-== Znovu načítať
-
 Use current map as background
 == Použiť aktuálnu mapu ako pozadie
 
@@ -1684,8 +1666,8 @@ DDNet %s is available:
 Update now
 == Aktualizovať teraz
 
-Updating...
-== Aktualizácia...
+Updating…
+== Aktualizácia…
 
 DDNet Client updated!
 == DDNet Klient aktualizovaný!
@@ -1754,8 +1736,8 @@ DDNet %s is out!
 Downloading %s:
 == Sťahovanie %s:
 
-Update failed! Check log...
-== Aktualizácia zlyhala! Skontrolujte log...
+Update failed! Check log…
+== Aktualizácia zlyhala! Skontrolujte log…
 
 Loading race demo files
 == Načítanie záznamov závodov
@@ -1819,3 +1801,142 @@ Grabs
 
 Moved ingame
 == Presunutý v hre
+
+Loading demo file from storage
+== Načítanie súboru záznamu z úložiska
+
+No login required
+== Bez prihlásenia
+
+Player info change cooldown
+== Cooldown zmeny informácií o hráči
+
+Always show chat
+== Vždy zobraziť chat
+
+Show friend mark (♥) in name plates
+== Zobraziť značku priateľa (♥) v menovkách
+
+Show hook strength icon indicator
+== Zobraziť silu háku pomocou ikony
+
+Show hook strength number indicator
+== Zobraziť silu háku pomocou čísla
+
+Show own player's hook collision line
+== Zobraziť čiaru kolízie háku vlastného hráča
+
+Always show own player's hook collision line
+== Vždy zobraziť čiaru kolízie háku vlastného hráča
+
+Always show other players' hook collision lines
+== Vždy zobraziť čiaru kolízie hákov ostatných hráčov
+
+%d/%d KiB (%.1f KiB/s)
+== %d/%d KiB (%.1f KiB/s)
+
+Tee
+== Tee
+
+Show only chat messages from team members
+== Zobraziť iba správy od členov tímu
+
+Could not resolve connect address '%s'. See local console for details.
+== Nie je možné získať adresu na pripojenie '%s'. Podrobnosti nájdete v miestnej konzole.
+
+Connect address error
+== Chyba v adrese na pripojenie
+
+Could not connect dummy
+== Nepodarilo sa pripojiť dummyho
+
+[Spectating]
+Following %s
+== Sledujete %s
+
+Example of usage
+== Príklad použitia
+
+Dummy is not allowed on this server
+== Dummy nie je na tomto serveri povolený
+
+Please wait…
+== Čakajte prosím…
+
+Show client IDs (scoreboard, chat, spectator)
+== Zobraziť ID klientov (výsledková tabuľka, chat, divák)
+
+Are you sure that you want to delete '%s'?
+== Ste si istí, že chcete zmazať '%s'?
+
+Delete skin
+== Odstrániť skin
+
+Basic
+== Základné
+
+Custom
+== Vlastné
+
+Unable to delete skin
+== Nedá sa odstrániť skin
+
+Round %d/%d
+== Kolo %d/%d
+
+[Spectators]
+%d others…
+== %d ďalších…
+
+[Team and size]
+%d\n(%d/%d)
+== %d\n(%d/%d)
+
+Team %d (%d/%d)
+== Tím %d (%d/%d)
+
+https://wiki.ddnet.org/wiki/Mapping
+== https://wiki.ddnet.org/wiki/Mapping
+
+Save skin
+== Uložiť skin
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
+== Naozaj chcete uložiť svoj skin? Ak skin s týmto názvom už existuje, bude nahradený.
+
+Unable to save the skin
+== Nie je možné uložiť skin
+
+Unable to save the skin with a reserved name
+== Nie je možné uložiť skin s rezervovaným názvom
+
+No local servers found (ports %d-%d)
+== Žiadny miestny server nenájdený (porty %d-%d)
+
+[Hertz]
+Hz
+== Hz
+
+[skins]
+Body
+== Telo
+
+[skins]
+Marking
+== Značenie
+
+[skins]
+Decoration
+== Dekorácia
+
+[skins]
+Hands
+== Ruky
+
+[skins]
+Feet
+== Chodidlá
+
+[skins]
+Eyes
+== Oči

@@ -78,6 +78,7 @@ void CMenus::HandleDemoSeeking(float PositionToSeek, float TimeToSeek)
 	if((PositionToSeek >= 0.0f && PositionToSeek <= 1.0f) || TimeToSeek != 0.0f)
 	{
 		m_pClient->m_Chat.Reset();
+		m_pClient->m_DamageInd.OnReset();
 		m_pClient->m_InfoMessages.OnReset();
 		m_pClient->m_Particles.OnReset();
 		m_pClient->m_Sounds.OnReset();
@@ -89,8 +90,6 @@ void CMenus::HandleDemoSeeking(float PositionToSeek, float TimeToSeek)
 		else
 			DemoPlayer()->SeekPercent(PositionToSeek);
 		m_pClient->m_SuppressEvents = false;
-		m_pClient->m_MapLayersBackground.EnvelopeUpdate();
-		m_pClient->m_MapLayersForeground.EnvelopeUpdate();
 		if(!DemoPlayer()->BaseInfo()->m_Paused && PositionToSeek == 1.0f)
 			DemoPlayer()->Pause();
 	}
@@ -102,8 +101,6 @@ void CMenus::DemoSeekTick(IDemoPlayer::ETickOffset TickOffset)
 	DemoPlayer()->SeekTick(TickOffset);
 	m_pClient->m_SuppressEvents = false;
 	DemoPlayer()->Pause();
-	m_pClient->m_MapLayersBackground.EnvelopeUpdate();
-	m_pClient->m_MapLayersForeground.EnvelopeUpdate();
 }
 
 void CMenus::RenderDemoPlayer(CUIRect MainView)
@@ -174,12 +171,12 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		// increase/decrease speed
 		if(!Input()->ModifierIsPressed() && !Input()->ShiftIsPressed() && !Input()->AltIsPressed())
 		{
-			if(Input()->KeyPress(KEY_MOUSE_WHEEL_UP) || Input()->KeyPress(KEY_UP))
+			if(Input()->KeyPress(KEY_UP) || (m_MenuActive && Input()->KeyPress(KEY_MOUSE_WHEEL_UP)))
 			{
 				DemoPlayer()->AdjustSpeedIndex(+1);
 				UpdateLastSpeedChange();
 			}
-			else if(Input()->KeyPress(KEY_MOUSE_WHEEL_DOWN) || Input()->KeyPress(KEY_DOWN))
+			else if(Input()->KeyPress(KEY_DOWN) || (m_MenuActive && Input()->KeyPress(KEY_MOUSE_WHEEL_DOWN)))
 			{
 				DemoPlayer()->AdjustSpeedIndex(-1);
 				UpdateLastSpeedChange();
@@ -461,7 +458,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			else
 			{
 				static float s_PrevAmount = 0.0f;
-				float AmountSeek = clamp((Ui()->MouseX() - SeekBar.x - Rounding) / (float)(SeekBar.w - 2 * Rounding), 0.0f, 1.0f);
+				float AmountSeek = clamp((Ui()->MouseX() - SeekBar.x - Rounding) / (SeekBar.w - 2 * Rounding), 0.0f, 1.0f);
 
 				if(Input()->ShiftIsPressed())
 				{
@@ -487,17 +484,18 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			{
 				Ui()->SetActiveItem(pId);
 			}
-			else
-			{
-				const int HoveredTick = (int)(clamp((Ui()->MouseX() - SeekBar.x - Rounding) / (float)(SeekBar.w - 2 * Rounding), 0.0f, 1.0f) * TotalTicks);
-				static char s_aHoveredTime[32];
-				str_time((int64_t)HoveredTick / Client()->GameTickSpeed() * 100, TIME_HOURS, s_aHoveredTime, sizeof(s_aHoveredTime));
-				GameClient()->m_Tooltips.DoToolTip(pId, &SeekBar, s_aHoveredTime);
-			}
 		}
 
-		if(Inside)
+		if(Inside && !Ui()->MouseButton(0))
 			Ui()->SetHotItem(pId);
+
+		if(Ui()->HotItem() == pId)
+		{
+			const int HoveredTick = (int)(clamp((Ui()->MouseX() - SeekBar.x - Rounding) / (SeekBar.w - 2 * Rounding), 0.0f, 1.0f) * TotalTicks);
+			static char s_aHoveredTime[32];
+			str_time((int64_t)HoveredTick / Client()->GameTickSpeed() * 100, TIME_HOURS, s_aHoveredTime, sizeof(s_aHoveredTime));
+			GameClient()->m_Tooltips.DoToolTip(pId, &SeekBar, s_aHoveredTime);
+		}
 	}
 
 	bool IncreaseDemoSpeed = false, DecreaseDemoSpeed = false;
@@ -829,13 +827,15 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 	static CButtonContainer s_ButtonOk;
 	if(DoButton_Menu(&s_ButtonOk, Localize("Ok"), 0, &OkButton) || (!Ui()->IsPopupOpen() && Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER)))
 	{
+		if(str_endswith(m_DemoSliceInput.GetString(), ".demo"))
+		{
+			char aNameWithoutExt[IO_MAX_PATH_LENGTH];
+			fs_split_file_extension(m_DemoSliceInput.GetString(), aNameWithoutExt, sizeof(aNameWithoutExt));
+			m_DemoSliceInput.Set(aNameWithoutExt);
+		}
+
 		char aDemoName[IO_MAX_PATH_LENGTH];
-		char aNameWithoutExt[IO_MAX_PATH_LENGTH];
 		DemoPlayer()->GetDemoName(aDemoName, sizeof(aDemoName));
-
-		fs_split_file_extension(m_DemoSliceInput.GetString(), aNameWithoutExt, sizeof(aNameWithoutExt));
-		m_DemoSliceInput.Set(aNameWithoutExt);
-
 		if(str_comp(aDemoName, m_DemoSliceInput.GetString()) == 0)
 		{
 			static CUi::SMessagePopupContext s_MessagePopupContext;
@@ -1058,7 +1058,7 @@ void CMenus::FetchAllHeaders()
 
 void CMenus::RenderDemoBrowser(CUIRect MainView)
 {
-	m_pBackground->ChangePosition(CMenuBackground::POS_DEMOS);
+	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_DEMOS);
 
 	CUIRect ListView, DetailsView, ButtonsView;
 	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
@@ -1085,7 +1085,14 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 #if defined(CONF_VIDEORECORDER)
 	if(!m_DemoRenderInput.IsEmpty())
 	{
-		m_Popup = POPUP_RENDER_DONE;
+		if(DemoPlayer()->ErrorMessage()[0] == '\0')
+		{
+			m_Popup = POPUP_RENDER_DONE;
+		}
+		else
+		{
+			m_DemoRenderInput.Clear();
+		}
 	}
 #endif
 
@@ -1301,7 +1308,7 @@ void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
 	Contents.HSplitTop(18.0f, &Left, &Contents);
 	Left.VSplitMid(&Left, &Right, 4.0f);
 	Ui()->DoLabel(&Left, pItem->m_Info.m_aType, FontSize - 1.0f, TEXTALIGN_ML);
-	str_from_int(pItem->m_Info.m_Version, aBuf);
+	str_format(aBuf, sizeof(aBuf), "%d", pItem->m_Info.m_Version);
 	Ui()->DoLabel(&Right, aBuf, FontSize - 1.0f, TEXTALIGN_ML);
 	Contents.HSplitTop(4.0f, nullptr, &Contents);
 
@@ -1313,7 +1320,7 @@ void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
 	Left.VSplitMid(&Left, &Right, 4.0f);
 	str_time((int64_t)pItem->Length() * 100, TIME_HOURS, aBuf, sizeof(aBuf));
 	Ui()->DoLabel(&Left, aBuf, FontSize - 1.0f, TEXTALIGN_ML);
-	str_from_int(pItem->NumMarkers(), aBuf);
+	str_format(aBuf, sizeof(aBuf), "%d", pItem->NumMarkers());
 	Ui()->DoLabel(&Right, aBuf, FontSize - 1.0f, TEXTALIGN_ML);
 	Contents.HSplitTop(4.0f, nullptr, &Contents);
 
@@ -1386,22 +1393,10 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 
 	// quick search
 	{
-		SetIconMode(true);
-		CUIRect DemoSearch, SearchIcon;
+		CUIRect DemoSearch;
 		ButtonBarTop.VSplitLeft(ButtonBarBottom.h * 21.0f, &DemoSearch, &ButtonBarTop);
 		ButtonBarTop.VSplitLeft(ButtonBarTop.h / 2.0f, nullptr, &ButtonBarTop);
-		DemoSearch.VSplitLeft(TextRender()->TextWidth(14.0f, FONT_ICON_MAGNIFYING_GLASS), &SearchIcon, &DemoSearch);
-		DemoSearch.VSplitLeft(5.0f, nullptr, &DemoSearch);
-		Ui()->DoLabel(&SearchIcon, FONT_ICON_MAGNIFYING_GLASS, 14.0f, TEXTALIGN_ML);
-		SetIconMode(false);
-		m_DemoSearchInput.SetEmptyText(Localize("Search"));
-
-		if(Input()->KeyPress(KEY_F) && Input()->ModifierIsPressed())
-		{
-			Ui()->SetActiveItem(&m_DemoSearchInput);
-			m_DemoSearchInput.SelectAll();
-		}
-		if(Ui()->DoClearableEditBox(&m_DemoSearchInput, &DemoSearch, 12.0f))
+		if(Ui()->DoEditBox_Search(&m_DemoSearchInput, &DemoSearch, 14.0f, !Ui()->IsPopupOpen() && m_pClient->m_GameConsole.IsClosed()))
 		{
 			RefreshFilteredDemos();
 			DemolistOnUpdate(false);
@@ -1448,10 +1443,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		{
 			char aBuf[IO_MAX_PATH_LENGTH];
 			Storage()->GetCompletePath(m_DemolistSelectedIndex >= 0 ? m_vpFilteredDemos[m_DemolistSelectedIndex]->m_StorageType : IStorage::TYPE_SAVE, m_aCurrentDemoFolder[0] == '\0' ? "demos" : m_aCurrentDemoFolder, aBuf, sizeof(aBuf));
-			if(!open_file(aBuf))
-			{
-				dbg_msg("menus", "couldn't open file '%s'", aBuf);
-			}
+			Client()->ViewFile(aBuf);
 		}
 		GameClient()->m_Tooltips.DoToolTip(&s_DemosDirectoryButton, &DemosDirectoryButton, Localize("Open the directory that contains the demo files"));
 	}

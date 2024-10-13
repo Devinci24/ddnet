@@ -1353,9 +1353,9 @@ public:
 		m_Color.a = a;
 	}
 
-	void TextColor(ColorRGBA rgb) override
+	void TextColor(ColorRGBA Color) override
 	{
-		m_Color = rgb;
+		m_Color = Color;
 	}
 
 	void TextOutlineColor(float r, float g, float b, float a) override
@@ -1366,9 +1366,9 @@ public:
 		m_OutlineColor.a = a;
 	}
 
-	void TextOutlineColor(ColorRGBA rgb) override
+	void TextOutlineColor(ColorRGBA Color) override
 	{
-		m_OutlineColor = rgb;
+		m_OutlineColor = Color;
 	}
 
 	void TextSelectionColor(float r, float g, float b, float a) override
@@ -1379,9 +1379,9 @@ public:
 		m_SelectionColor.a = a;
 	}
 
-	void TextSelectionColor(ColorRGBA rgb) override
+	void TextSelectionColor(ColorRGBA Color) override
 	{
-		m_SelectionColor = rgb;
+		m_SelectionColor = Color;
 	}
 
 	ColorRGBA GetTextColor() const override
@@ -1612,7 +1612,6 @@ public:
 		bool HasCursor = false;
 
 		const SGlyph *pLastGlyph = nullptr;
-		bool GotNewLine = false;
 		bool GotNewLineLast = false;
 
 		int ColorOption = 0;
@@ -1668,7 +1667,7 @@ public:
 
 			while(pCurrent < pBatchEnd && pCurrent != pEllipsis)
 			{
-				const int PrevCharCount = pCursor->m_GlyphCount;
+				const int PrevCharCount = pCursor->m_CharCount;
 				pCursor->m_CharCount += pTmp - pCurrent;
 				pCurrent = pTmp;
 				int Character = NextCharacter;
@@ -1839,13 +1838,13 @@ public:
 					}
 					if(pCursor->m_CalculateSelectionMode == TEXT_CURSOR_SELECTION_MODE_SET)
 					{
-						if((int)pCursor->m_GlyphCount == pCursor->m_SelectionStart)
+						if(pCursor->m_GlyphCount == pCursor->m_SelectionStart)
 						{
 							SelectionStarted = !SelectionStarted;
 							SelectionStartChar = pCursor->m_GlyphCount;
 							SelectionUsedPress = true;
 						}
-						if((int)pCursor->m_GlyphCount == pCursor->m_SelectionEnd)
+						if(pCursor->m_GlyphCount == pCursor->m_SelectionEnd)
 						{
 							SelectionStarted = !SelectionStarted;
 							SelectionEndChar = pCursor->m_GlyphCount;
@@ -1855,7 +1854,7 @@ public:
 
 					if(pCursor->m_CursorMode != TEXT_CURSOR_CURSOR_MODE_NONE)
 					{
-						if((int)pCursor->m_GlyphCount == pCursor->m_CursorCharacter)
+						if(pCursor->m_GlyphCount == pCursor->m_CursorCharacter)
 						{
 							HasCursor = true;
 							aCursorQuads[0] = IGraphics::CQuadItem(SelX - CursorOuterInnerDiff, DrawY, CursorOuterWidth, pCursor->m_AlignedFontSize);
@@ -1902,7 +1901,6 @@ public:
 			{
 				if(!StartNewLine())
 					break;
-				GotNewLine = true;
 				GotNewLineLast = true;
 			}
 			else
@@ -1938,13 +1936,13 @@ public:
 		}
 		else if(pCursor->m_CalculateSelectionMode == TEXT_CURSOR_SELECTION_MODE_SET)
 		{
-			if((int)pCursor->m_GlyphCount == pCursor->m_SelectionStart)
+			if(pCursor->m_GlyphCount == pCursor->m_SelectionStart)
 			{
 				SelectionStarted = !SelectionStarted;
 				SelectionStartChar = pCursor->m_GlyphCount;
 				SelectionUsedPress = true;
 			}
-			if((int)pCursor->m_GlyphCount == pCursor->m_SelectionEnd)
+			if(pCursor->m_GlyphCount == pCursor->m_SelectionEnd)
 			{
 				SelectionStarted = !SelectionStarted;
 				SelectionEndChar = pCursor->m_GlyphCount;
@@ -1959,7 +1957,7 @@ public:
 				pCursor->m_CursorCharacter = pCursor->m_GlyphCount;
 			}
 
-			if((int)pCursor->m_GlyphCount == pCursor->m_CursorCharacter)
+			if(pCursor->m_GlyphCount == pCursor->m_CursorCharacter)
 			{
 				HasCursor = true;
 				aCursorQuads[0] = IGraphics::CQuadItem((LastSelX + LastSelWidth) - CursorOuterInnerDiff, DrawY, CursorOuterWidth, pCursor->m_AlignedFontSize);
@@ -1998,10 +1996,8 @@ public:
 
 		// even if no text is drawn the cursor position will be adjusted
 		pCursor->m_X = DrawX;
+		pCursor->m_Y = DrawY;
 		pCursor->m_LineCount = LineCount;
-
-		if(GotNewLine)
-			pCursor->m_Y = DrawY;
 
 		TextContainer.m_BoundingBox = pCursor->BoundingBox();
 	}

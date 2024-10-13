@@ -5,6 +5,8 @@
 
 #include <game/gamecore.h>
 
+#include "save.h"
+
 #include <vector>
 
 class CEntity;
@@ -134,6 +136,12 @@ public:
 	void Snap(int SnappingClient);
 
 	/*
+		Function: PostSnap
+			Called after all clients received their snapshot.
+	*/
+	void PostSnap();
+
+	/*
 		Function: Tick
 			Calls Tick on all the entities in the world to progress
 			the world to the next tick.
@@ -146,6 +154,12 @@ public:
 			command is handled safely.
 	*/
 	void SwapClients(int Client1, int Client2);
+
+	/*
+		Function: BlocksSave
+			Checks if any entity would block /save
+	*/
+	ESaveResult BlocksSave(int ClientId);
 
 	// DDRace
 	void ReleaseHooked(int ClientId);

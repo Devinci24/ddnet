@@ -76,8 +76,8 @@ Client
 Connecting to
 == ﻪﺑ ﻥﺪﺷ ﻞﺻﻭ
 
-Connection Problems...
-== ...ﺪﺷ ﻪﺟﺍﻮﻣ ﻞﻜﺸﻣ ﺎﺑ ﻁﺎﺒﺗﺭﺍ
+Connection Problems…
+== …ﺪﺷ ﻪﺟﺍﻮﻣ ﻞﻜﺸﻣ ﺎﺑ ﻁﺎﺒﺗﺭﺍ
 
 Console
 == ﻝﻮﺴﻨﻛ
@@ -519,9 +519,6 @@ Kill
 Pause
 == ﺚﮑﻣ ﺖﻟﺎﺣ
 
-Player options
-== ﻦﮑﯾﺯﺎﺑ ﺕﺎﻤﯿﻈﻨﺗ
-
 Player
 == ﻦﮑﯾﺯﺎﺑ
 
@@ -542,9 +539,6 @@ Vote command:
 
 Time
 == ﻥﺎﻣﺯ
-
-Reload
-== ﻩﺭﺎﺑﻭﺩ ﯼﺮﯿﮔﺭﺎﺑ
 
 Deactivate
 == ﻥﺩﺮﮐ ﻝﺎﻌﻓﺮﯿﻏ
@@ -702,9 +696,6 @@ Background music volume
 Sound
 == ﺍﺪﺻ
 
-Use DDRace Scoreboard
-== DDRace ﺕﺍﺯﺎﯿﺘﻣﺍ ﯼﻮﻠﺑﺎﺗ ﺯﺍ ﻩﺩﺎﻔﺘﺳﺍ
-
 Show score
 == ﺯﺎﯿﺘﻣﺍ ﺶﯾﺎﻤﻧ
 
@@ -738,7 +729,7 @@ Background
 Update now
 == ﻦﮐ ﯽﻧﺎﺳﺭﺯﻭﺮﺑ ﻥﻻﺍ ﻦﯿﻤﻫ
 
-Updating...
+Updating…
 == ﯽﻧﺎﺳﺭﺯﻭﺮﺑ ﻝﺎﺣﺭﺩ
 
 No updates available
@@ -775,8 +766,8 @@ Play
 Downloading %s:
 == %s :ﺩﻮﻠﻧﺍﺩ ﻝﺎﺣﺭﺩ
 
-Update failed! Check log...
-== ... ﺪﯿﻨﮐ ﮏﭼ ﺍﺭ گﻻ!ﻖﻓﻮﻣﺎﻧ ﯽﻧﺎﺳﺭﺯﻭﺮﺑ
+Update failed! Check log…
+== … ﺪﯿﻨﮐ ﮏﭼ ﺍﺭ گﻻ!ﻖﻓﻮﻣﺎﻧ ﯽﻧﺎﺳﺭﺯﻭﺮﺑ
 
 Restart
 == ﺩﺪﺠﻣ ﯼﺯﺍﺪﻧﺍ ﻩﺍﺭ
@@ -869,8 +860,8 @@ Uploading map data to GPU
 The audio device couldn't be initialised.
 == .ﺩﻮﺷ ﯼﺯﺍﺪﻧﺍ ﻩﺍﺭ ﺪﻧﺍﻮﺗ ﯽﻤﻧ ﯽﺗﻮﺻ ﻩﺎﮕﺘﺳﺩ
 
-Trying to determine UDP connectivity...
-== UDP... ﻝﺎﺼﺗﺍ ﻦﯿﯿﻌﺗ ﯼﺍﺮﺑ ﺵﻼﺗ
+Trying to determine UDP connectivity…
+== UDP… ﻝﺎﺼﺗﺍ ﻦﯿﯿﻌﺗ ﯼﺍﺮﺑ ﺵﻼﺗ
 
 UDP seems to be filtered.
 == .ﺖﺳﺍ ﻩﺪﺷ ﺮﺘﻠﯿﻓ UDP ﺪﺳﺭ ﯽﻣ ﺮﻈﻧ ﻪﺑ
@@ -1228,9 +1219,6 @@ Show votes window after voting
 DDRace HUD
 == DDRace HUD
 
-Show client IDs in scoreboard
-== ﺯﺎﯿﺘﻣﺍ ﯼﻮﻠﺑﺎﺗ ﺭﺩ ﺖﻨﯾﻼﮐ ID ﺶﯾﺎﻤﻧ
-
 Show DDRace HUD
 == DDRace HUD ﺶﯾﺎﻤﻧ
 
@@ -1284,9 +1272,6 @@ Clan plates size
 
 Use team colors for name plates
 ==  ﻡﺎﻧ کﻼﭘ ﯼﺍﺮﺑ ﯽﻤﯿﺗ ﯼﺎﻫ ﮓﻧﺭ ﺯﺍ ﻩﺩﺎﻔﺘﺳﺍ
-
-Show hook strength indicator
-== ﺏﻼﻗ ﺕﺭﺪﻗ ﺮﮕﻧﺎﺸﻧ ﺶﯾﺎﻤﻧ
 
 Show other players' key presses
 == ﺮﮕﯾﺩ ﻥﺎﻨﮑﯾﺯﺎﺑ ﺪﯿﻠﮐ ﺭﺎﺸﻓ ﺶﯾﺎﻤﻧ
@@ -1471,9 +1456,6 @@ Loading race demo files
 Time limit: %d min
 == ﻪﻘﯿﻗﺩ %d :ﯽﻧﺎﻣﺯ ﺖﯾﺩﻭﺪﺤﻣ
 
-Round
-== ﺪﻧﺍﺭ
-
 Super
 == ﺮﭘﻮﺳ
 
@@ -1527,7 +1509,16 @@ Could not initialize the given graphics backend, reverting to the default backen
 Could not initialize the given graphics backend, this is probably because you didn't install the driver of the integrated graphics card.
 == 
 
+Could not resolve connect address '%s'. See local console for details.
+== 
+
+Connect address error
+== 
+
 Could not save downloaded map. Try manually deleting this file: %s
+== 
+
+Could not connect dummy
 == 
 
 Error playing demo
@@ -1546,6 +1537,9 @@ The width of texture %s is not divisible by %d, or the height is not divisible b
 == 
 
 The format of texture %s is not RGBA which will cause visual bugs.
+== 
+
+Loading demo file from storage
 == 
 
 Initializing map logic
@@ -1590,6 +1584,10 @@ Loading commands…
 Multi-View
 == 
 
+[Spectating]
+Following %s
+== 
+
 Some map images could not be loaded. Check the local console for details.
 == 
 
@@ -1614,6 +1612,12 @@ Render complete
 Are you sure that you want to restart?
 == 
 
+Save skin
+== 
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
+== 
+
 There's an unsaved map in the editor, you might want to save it.
 == 
 
@@ -1636,6 +1640,24 @@ Videos directory
 == 
 
 Video was saved to '%s'
+== 
+
+Unable to save the skin
+== 
+
+Unable to save the skin with a reserved name
+== 
+
+%d/%d KiB (%.1f KiB/s)
+== 
+
+No local servers found (ports %d-%d)
+== 
+
+Example of usage
+== 
+
+No login required
 == 
 
 Communities
@@ -1747,6 +1769,12 @@ Delete folder
 Unable to delete the folder '%s'. Make sure it's empty first.
 == 
 
+Dummy is not allowed on this server
+== 
+
+Please wait…
+== 
+
 Loading…
 == 
 
@@ -1759,6 +1787,13 @@ Activate all
 Deactivate all
 == 
 
+[Hertz]
+Hz
+== 
+
+Player info change cooldown
+== 
+
 Create a random skin
 == 
 
@@ -1768,10 +1803,22 @@ Axis
 Graphics card
 == 
 
+Tee
+== 
+
 Info Messages
 == 
 
 Show local time always
+== 
+
+Show client IDs (scoreboard, chat, spectator)
+== 
+
+Always show chat
+== 
+
+Show only chat messages from team members
 == 
 
 Chat font size
@@ -1780,10 +1827,28 @@ Chat font size
 Chat width
 == 
 
+Show friend mark (♥) in name plates
+== 
+
+Show hook strength icon indicator
+== 
+
+Show hook strength number indicator
+== 
+
 Authed name color in scoreboard
 == 
 
 Same clan color in scoreboard
+== 
+
+Show own player's hook collision line
+== 
+
+Always show own player's hook collision line
+== 
+
+Always show other players' hook collision lines
 == 
 
 Show finish messages
@@ -1804,6 +1869,59 @@ Entities background color
 Unregister protocol and file extensions
 == 
 
+Basic
+== 
+
+Custom
+== 
+
+Are you sure that you want to delete '%s'?
+== 
+
+Delete skin
+== 
+
+Unable to delete skin
+== 
+
+Round %d/%d
+== 
+
+[Spectators]
+%d others…
+== 
+
+[Team and size]
+%d\n(%d/%d)
+== 
+
+Team %d (%d/%d)
+== 
+
+[skins]
+Body
+== 
+
+[skins]
+Marking
+== 
+
+[skins]
+Decoration
+== 
+
+[skins]
+Hands
+== 
+
+[skins]
+Feet
+== 
+
+[skins]
+Eyes
+== 
+
 FPM
 == 
 
@@ -1814,4 +1932,7 @@ Grabs
 == 
 
 Moved ingame
+== 
+
+https://wiki.ddnet.org/wiki/Mapping
 == 

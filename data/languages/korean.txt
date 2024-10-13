@@ -88,8 +88,8 @@ Client
 Connecting to
 == 연결 중
 
-Connection Problems...
-== 연결 문제 발생...
+Connection Problems…
+== 연결 문제 발생…
 
 Console
 == 콘솔
@@ -279,9 +279,6 @@ Pistol
 
 Player
 == 플레이어
-
-Player options
-== 플레이어 옵션
 
 Players
 == 플레이어
@@ -477,9 +474,6 @@ Max demos
 Internet
 == 인터넷
 
-Round
-== 라운드
-
 News
 == 뉴스
 
@@ -536,9 +530,6 @@ Successfully saved the replay!
 
 Replay feature is disabled!
 == 리플레이 기능을 비활성화했습니다!
-
-The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
-== 텍스처 %s 의 너비 또는 높이를 %d 으로 나눌 수 없습니다. 이는 시각적 오류를 발생시킬 수 있습니다.
 
 Warning
 == 주의
@@ -704,9 +695,6 @@ Pause
 
 Time
 == 시간
-
-Reload
-== 새로고침
 
 Deactivate
 == 비활성화
@@ -891,9 +879,6 @@ Assets
 DDNet Client needs to be restarted to complete update!
 == 업데이트 완료를 위해 DDNet 클라이언트 재시작이 필요합니다!
 
-Use DDRace Scoreboard
-== DDRace 점수판 사용
-
 Show score
 == 점수 표시
 
@@ -1011,8 +996,8 @@ DDNet %s is available:
 Update now
 == 지금 업데이트하기
 
-Updating...
-== 업데이트 중...
+Updating…
+== 업데이트 중…
 
 DDNet Client updated!
 == DDNet 클라이언트가 업데이트되었습니다!
@@ -1075,8 +1060,8 @@ DDNet %s is out!
 Downloading %s:
 == %s 다운로드 중:
 
-Update failed! Check log...
-== 업데이트 실패! 로그를 확인해 주십시오...
+Update failed! Check log…
+== 업데이트 실패! 로그를 확인해 주십시오…
 
 Restart
 == 재시작
@@ -1222,8 +1207,8 @@ Speed:
 Angle:
 == 각도
 
-Trying to determine UDP connectivity...
-== UDP 연결 확인 시도 중...
+Trying to determine UDP connectivity…
+== UDP 연결 확인 시도 중…
 
 UDP seems to be filtered.
 == UDP가 필터링된 것으로 보입니다.
@@ -1365,17 +1350,11 @@ Show health, shields and ammo
 DDRace HUD
 == DDRace HUD
 
-Show client IDs in scoreboard
-== 점수판에 클라이언트 ID 표시
-
 Show DDRace HUD
 == DDRace HUD 표시
 
 Show jumps indicator
 == 점프 상태 표시
-
-Show hook strength indicator
-== 갈고리 세기 표시
 
 Hook collision line
 == 갈고리 보조선
@@ -1572,6 +1551,15 @@ Copy info
 Create a random skin
 == 무작위 스킨 생성
 
+Could not resolve connect address '%s'. See local console for details.
+== 
+
+Connect address error
+== 
+
+Could not connect dummy
+== 
+
 Error playing demo
 == 
 
@@ -1582,6 +1570,12 @@ Saving settings to '%s' failed
 == 
 
 Error saving settings
+== 
+
+The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
+== 
+
+Loading demo file from storage
 == 
 
 Quitting. Please wait…
@@ -1623,6 +1617,10 @@ Loading commands…
 Multi-View
 == 
 
+[Spectating]
+Following %s
+== 
+
 Some map images could not be loaded. Check the local console for details.
 == 
 
@@ -1647,6 +1645,12 @@ Render complete
 Are you sure that you want to restart?
 == 
 
+Save skin
+== 
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
+== 
+
 There's an unsaved map in the editor, you might want to save it.
 == 
 
@@ -1669,6 +1673,24 @@ Videos directory
 == 
 
 Video was saved to '%s'
+== 
+
+Unable to save the skin
+== 
+
+Unable to save the skin with a reserved name
+== 
+
+%d/%d KiB (%.1f KiB/s)
+== 
+
+No local servers found (ports %d-%d)
+== 
+
+Example of usage
+== 
+
+No login required
 == 
 
 Communities
@@ -1777,6 +1799,12 @@ Delete folder
 Unable to delete the folder '%s'. Make sure it's empty first.
 == 
 
+Dummy is not allowed on this server
+== 
+
+Please wait…
+== 
+
 Loading…
 == 
 
@@ -1789,10 +1817,20 @@ Activate all
 Deactivate all
 == 
 
+[Hertz]
+Hz
+== 
+
+Player info change cooldown
+== 
+
 Axis
 == 
 
 Graphics card
+== 
+
+Tee
 == 
 
 Info Messages
@@ -1801,16 +1839,43 @@ Info Messages
 Show local time always
 == 
 
+Show client IDs (scoreboard, chat, spectator)
+== 
+
+Always show chat
+== 
+
+Show only chat messages from team members
+== 
+
 Chat font size
 == 
 
 Chat width
 == 
 
+Show friend mark (♥) in name plates
+== 
+
+Show hook strength icon indicator
+== 
+
+Show hook strength number indicator
+== 
+
 Authed name color in scoreboard
 == 
 
 Same clan color in scoreboard
+== 
+
+Show own player's hook collision line
+== 
+
+Always show own player's hook collision line
+== 
+
+Always show other players' hook collision lines
 == 
 
 Show finish messages
@@ -1828,5 +1893,61 @@ Regular background color
 Entities background color
 == 
 
+Basic
+== 
+
+Custom
+== 
+
+Are you sure that you want to delete '%s'?
+== 
+
+Delete skin
+== 
+
+Unable to delete skin
+== 
+
+Round %d/%d
+== 
+
+[Spectators]
+%d others…
+== 
+
+[Team and size]
+%d\n(%d/%d)
+== 
+
+Team %d (%d/%d)
+== 
+
+[skins]
+Body
+== 
+
+[skins]
+Marking
+== 
+
+[skins]
+Decoration
+== 
+
+[skins]
+Hands
+== 
+
+[skins]
+Feet
+== 
+
+[skins]
+Eyes
+== 
+
 Moved ingame
+== 
+
+https://wiki.ddnet.org/wiki/Mapping
 == 

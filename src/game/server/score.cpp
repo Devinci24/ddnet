@@ -37,7 +37,7 @@ void CScore::ExecPlayerThread(
 		return;
 	auto Tmp = std::make_unique<CSqlPlayerRequest>(pResult);
 	str_copy(Tmp->m_aName, pName, sizeof(Tmp->m_aName));
-	str_copy(Tmp->m_aMap, g_Config.m_SvMap, sizeof(Tmp->m_aMap));
+	str_copy(Tmp->m_aMap, Server()->GetMapName(), sizeof(Tmp->m_aMap));
 	str_copy(Tmp->m_aServer, g_Config.m_SvSqlServerName, sizeof(Tmp->m_aServer));
 	str_copy(Tmp->m_aRequestingPlayer, Server()->ClientName(ClientId), sizeof(Tmp->m_aRequestingPlayer));
 	Tmp->m_Offset = Offset;
@@ -79,20 +79,16 @@ CScore::CScore(CGameContext *pGameServer, CDbConnectionPool *pPool) :
 	secure_random_fill(aSeed, sizeof(aSeed));
 	m_Prng.Seed(aSeed);
 
-	IOHANDLE File = GameServer()->Storage()->OpenFile("wordlist.txt", IOFLAG_READ | IOFLAG_SKIP_BOM, IStorage::TYPE_ALL);
-	if(File)
+	CLineReader LineReader;
+	if(LineReader.OpenFile(GameServer()->Storage()->OpenFile("wordlist.txt", IOFLAG_READ, IStorage::TYPE_ALL)))
 	{
-		CLineReader LineReader;
-		LineReader.Init(File);
-		char *pLine;
-		while((pLine = LineReader.Get()))
+		while(const char *pLine = LineReader.Get())
 		{
 			char aWord[32] = {0};
 			sscanf(pLine, "%*s %31s", aWord);
 			aWord[31] = 0;
 			m_vWordlist.emplace_back(aWord);
 		}
-		io_close(File);
 	}
 	else
 	{
@@ -116,8 +112,8 @@ void CScore::LoadBestTime()
 	auto LoadBestTimeResult = std::make_shared<CScoreLoadBestTimeResult>();
 	m_pGameServer->m_pController->m_pLoadBestTimeResult = LoadBestTimeResult;
 
-	auto Tmp = std::make_unique<CSqlLoadBestTimeData>(LoadBestTimeResult);
-	str_copy(Tmp->m_aMap, g_Config.m_SvMap, sizeof(Tmp->m_aMap));
+	auto Tmp = std::make_unique<CSqlLoadBestTimeRequest>(LoadBestTimeResult);
+	str_copy(Tmp->m_aMap, Server()->GetMapName(), sizeof(Tmp->m_aMap));
 	m_pPool->Execute(CScoreWorker::LoadBestTime, std::move(Tmp), "load best time");
 }
 
@@ -145,22 +141,24 @@ void CScore::MapInfo(int ClientId, const char *pMapName)
 	ExecPlayerThread(CScoreWorker::MapInfo, "map info", ClientId, pMapName, 0);
 }
 
-void CScore::SaveScore(int ClientId, float Time, const char *pTimestamp, const float aTimeCp[NUM_CHECKPOINTS], bool NotEligible)
+void CScore::SaveScore(int ClientId, int TimeTicks, const char *pTimestamp, const float aTimeCp[NUM_CHECKPOINTS], bool NotEligible)
 {
 	CConsole *pCon = (CConsole *)GameServer()->Console();
 	if(pCon->Cheated() || NotEligible)
 		return;
+
+	GameServer()->TeehistorianRecordPlayerFinish(ClientId, TimeTicks);
 
 	CPlayer *pCurPlayer = GameServer()->m_apPlayers[ClientId];
 	if(pCurPlayer->m_ScoreFinishResult != nullptr)
 		dbg_msg("sql", "WARNING: previous save score result didn't complete, overwriting it now");
 	pCurPlayer->m_ScoreFinishResult = std::make_shared<CScorePlayerResult>();
 	auto Tmp = std::make_unique<CSqlScoreData>(pCurPlayer->m_ScoreFinishResult);
-	str_copy(Tmp->m_aMap, g_Config.m_SvMap, sizeof(Tmp->m_aMap));
+	str_copy(Tmp->m_aMap, Server()->GetMapName(), sizeof(Tmp->m_aMap));
 	FormatUuid(GameServer()->GameUuid(), Tmp->m_aGameUuid, sizeof(Tmp->m_aGameUuid));
 	Tmp->m_ClientId = ClientId;
 	str_copy(Tmp->m_aName, Server()->ClientName(ClientId), sizeof(Tmp->m_aName));
-	Tmp->m_Time = Time;
+	Tmp->m_Time = (float)(TimeTicks) / (float)Server()->TickSpeed();
 	str_copy(Tmp->m_aTimestamp, pTimestamp, sizeof(Tmp->m_aTimestamp));
 	for(int i = 0; i < NUM_CHECKPOINTS; i++)
 		Tmp->m_aCurrentTimeCp[i] = aTimeCp[i];
@@ -168,7 +166,7 @@ void CScore::SaveScore(int ClientId, float Time, const char *pTimestamp, const f
 	m_pPool->ExecuteWrite(CScoreWorker::SaveScore, std::move(Tmp), "save score");
 }
 
-void CScore::SaveTeamScore(int *pClientIds, unsigned int Size, float Time, const char *pTimestamp)
+void CScore::SaveTeamScore(int Team, int *pClientIds, unsigned int Size, int TimeTicks, const char *pTimestamp)
 {
 	CConsole *pCon = (CConsole *)GameServer()->Console();
 	if(pCon->Cheated())
@@ -178,14 +176,17 @@ void CScore::SaveTeamScore(int *pClientIds, unsigned int Size, float Time, const
 		if(GameServer()->m_apPlayers[pClientIds[i]]->m_NotEligibleForFinish)
 			return;
 	}
+
+	GameServer()->TeehistorianRecordTeamFinish(Team, TimeTicks);
+
 	auto Tmp = std::make_unique<CSqlTeamScoreData>();
 	for(unsigned int i = 0; i < Size; i++)
 		str_copy(Tmp->m_aaNames[i], Server()->ClientName(pClientIds[i]), sizeof(Tmp->m_aaNames[i]));
 	Tmp->m_Size = Size;
-	Tmp->m_Time = Time;
+	Tmp->m_Time = (float)TimeTicks / (float)Server()->TickSpeed();
 	str_copy(Tmp->m_aTimestamp, pTimestamp, sizeof(Tmp->m_aTimestamp));
 	FormatUuid(GameServer()->GameUuid(), Tmp->m_aGameUuid, sizeof(Tmp->m_aGameUuid));
-	str_copy(Tmp->m_aMap, g_Config.m_SvMap, sizeof(Tmp->m_aMap));
+	str_copy(Tmp->m_aMap, Server()->GetMapName(), sizeof(Tmp->m_aMap));
 	Tmp->m_TeamrankUuid = RandomUuid();
 
 	m_pPool->ExecuteWrite(CScoreWorker::SaveTeamScore, std::move(Tmp), "save team score");
@@ -261,7 +262,7 @@ void CScore::RandomMap(int ClientId, int Stars)
 
 	auto Tmp = std::make_unique<CSqlRandomMapRequest>(pResult);
 	Tmp->m_Stars = Stars;
-	str_copy(Tmp->m_aCurrentMap, g_Config.m_SvMap, sizeof(Tmp->m_aCurrentMap));
+	str_copy(Tmp->m_aCurrentMap, Server()->GetMapName(), sizeof(Tmp->m_aCurrentMap));
 	str_copy(Tmp->m_aServerType, g_Config.m_SvServerType, sizeof(Tmp->m_aServerType));
 	str_copy(Tmp->m_aRequestingPlayer, GameServer()->Server()->ClientName(ClientId), sizeof(Tmp->m_aRequestingPlayer));
 
@@ -275,7 +276,7 @@ void CScore::RandomUnfinishedMap(int ClientId, int Stars)
 
 	auto Tmp = std::make_unique<CSqlRandomMapRequest>(pResult);
 	Tmp->m_Stars = Stars;
-	str_copy(Tmp->m_aCurrentMap, g_Config.m_SvMap, sizeof(Tmp->m_aCurrentMap));
+	str_copy(Tmp->m_aCurrentMap, Server()->GetMapName(), sizeof(Tmp->m_aCurrentMap));
 	str_copy(Tmp->m_aServerType, g_Config.m_SvServerType, sizeof(Tmp->m_aServerType));
 	str_copy(Tmp->m_aRequestingPlayer, GameServer()->Server()->ClientName(ClientId), sizeof(Tmp->m_aRequestingPlayer));
 
@@ -288,25 +289,33 @@ void CScore::SaveTeam(int ClientId, const char *pCode, const char *pServer)
 		return;
 	auto *pController = GameServer()->m_pController;
 	int Team = pController->Teams().m_Core.Team(ClientId);
+	char aBuf[512];
 	if(pController->Teams().GetSaving(Team))
+	{
+		GameServer()->SendChatTarget(ClientId, "Team save already in progress");
 		return;
+	}
+	if(pController->Teams().IsPractice(Team))
+	{
+		GameServer()->SendChatTarget(ClientId, "Team save disabled for teams in practice mode");
+		return;
+	}
 
 	auto SaveResult = std::make_shared<CScoreSaveResult>(ClientId);
 	SaveResult->m_SaveId = RandomUuid();
-	int Result = SaveResult->m_SavedTeam.Save(GameServer(), Team);
+	ESaveResult Result = SaveResult->m_SavedTeam.Save(GameServer(), Team);
 	if(CSaveTeam::HandleSaveError(Result, ClientId, GameServer()))
 		return;
 	pController->Teams().SetSaving(Team, SaveResult);
 
-	auto Tmp = std::make_unique<CSqlTeamSave>(SaveResult);
+	auto Tmp = std::make_unique<CSqlTeamSaveData>(SaveResult);
 	str_copy(Tmp->m_aCode, pCode, sizeof(Tmp->m_aCode));
-	str_copy(Tmp->m_aMap, g_Config.m_SvMap, sizeof(Tmp->m_aMap));
+	str_copy(Tmp->m_aMap, Server()->GetMapName(), sizeof(Tmp->m_aMap));
 	str_copy(Tmp->m_aServer, pServer, sizeof(Tmp->m_aServer));
 	str_copy(Tmp->m_aClientName, this->Server()->ClientName(ClientId), sizeof(Tmp->m_aClientName));
 	Tmp->m_aGeneratedCode[0] = '\0';
 	GeneratePassphrase(Tmp->m_aGeneratedCode, sizeof(Tmp->m_aGeneratedCode));
 
-	char aBuf[512];
 	if(Tmp->m_aCode[0] == '\0')
 	{
 		str_format(aBuf,
@@ -334,7 +343,10 @@ void CScore::LoadTeam(const char *pCode, int ClientId)
 	auto *pController = GameServer()->m_pController;
 	int Team = pController->Teams().m_Core.Team(ClientId);
 	if(pController->Teams().GetSaving(Team))
+	{
+		GameServer()->SendChatTarget(ClientId, "Team load already in progress");
 		return;
+	}
 	if(Team < TEAM_FLOCK || Team >= MAX_CLIENTS || (g_Config.m_SvTeam != SV_TEAM_FORCED_SOLO && Team == TEAM_FLOCK))
 	{
 		GameServer()->SendChatTarget(ClientId, "You have to be in a team (from 1-63)");
@@ -350,13 +362,17 @@ void CScore::LoadTeam(const char *pCode, int ClientId)
 		GameServer()->SendChatTarget(ClientId, "Team can't be loaded while in team 0 mode");
 		return;
 	}
+	if(pController->Teams().IsPractice(Team))
+	{
+		GameServer()->SendChatTarget(ClientId, "Team can't be loaded while practice is enabled");
+		return;
+	}
 	auto SaveResult = std::make_shared<CScoreSaveResult>(ClientId);
 	SaveResult->m_Status = CScoreSaveResult::LOAD_FAILED;
 	pController->Teams().SetSaving(Team, SaveResult);
-	auto Tmp = std::make_unique<CSqlTeamLoad>(SaveResult);
+	auto Tmp = std::make_unique<CSqlTeamLoadRequest>(SaveResult);
 	str_copy(Tmp->m_aCode, pCode, sizeof(Tmp->m_aCode));
-	str_copy(Tmp->m_aMap, g_Config.m_SvMap, sizeof(Tmp->m_aMap));
-	Tmp->m_ClientId = ClientId;
+	str_copy(Tmp->m_aMap, Server()->GetMapName(), sizeof(Tmp->m_aMap));
 	str_copy(Tmp->m_aRequestingPlayer, Server()->ClientName(ClientId), sizeof(Tmp->m_aRequestingPlayer));
 	Tmp->m_NumPlayer = 0;
 	for(int i = 0; i < MAX_CLIENTS; i++)

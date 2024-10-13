@@ -109,7 +109,6 @@ void CMapImages::OnMapLoadImpl(class CLayers *pLayers, IMap *pMap)
 	{
 		const int LoadFlag = (((m_aTextureUsedByTileOrQuadLayerFlag[i] & 1) != 0) ? TextureLoadFlag : 0) | (((m_aTextureUsedByTileOrQuadLayerFlag[i] & 2) != 0) ? 0 : (Graphics()->HasTextureArraysSupport() ? IGraphics::TEXLOAD_NO_2D_TEXTURE : 0));
 		const CMapItemImage_v2 *pImg = (CMapItemImage_v2 *)pMap->GetItem(Start + i);
-		const CImageInfo::EImageFormat Format = pImg->m_Version < CMapItemImage_v2::CURRENT_VERSION ? CImageInfo::FORMAT_RGBA : CImageInfo::ImageFormatFromInt(pImg->m_Format);
 
 		const char *pName = pMap->GetDataString(pImg->m_ImageName);
 		if(pName == nullptr || pName[0] == '\0')
@@ -123,18 +122,34 @@ void CMapImages::OnMapLoadImpl(class CLayers *pLayers, IMap *pMap)
 			pName = "(error)";
 		}
 
+		if(pImg->m_Version > 1 && pImg->m_MustBe1 != 1)
+		{
+			log_error("mapimages", "Failed to load map image %d '%s': invalid map image type.", i, pName);
+			ShowWarning = true;
+			continue;
+		}
+
 		if(pImg->m_External)
 		{
 			char aPath[IO_MAX_PATH_LENGTH];
-			str_format(aPath, sizeof(aPath), "mapres/%s.png", pName);
+			bool Translated = false;
+			if(Client()->IsSixup())
+			{
+				Translated =
+					!str_comp(pName, "grass_doodads") ||
+					!str_comp(pName, "grass_main") ||
+					!str_comp(pName, "winter_main") ||
+					!str_comp(pName, "generic_unhookable");
+			}
+			str_format(aPath, sizeof(aPath), "mapres/%s%s.png", pName, Translated ? "_0.7" : "");
 			m_aTextures[i] = Graphics()->LoadTexture(aPath, IStorage::TYPE_ALL, LoadFlag);
 		}
-		else if(Format == CImageInfo::FORMAT_RGBA)
+		else
 		{
 			CImageInfo ImageInfo;
 			ImageInfo.m_Width = pImg->m_Width;
 			ImageInfo.m_Height = pImg->m_Height;
-			ImageInfo.m_Format = Format;
+			ImageInfo.m_Format = CImageInfo::FORMAT_RGBA;
 			ImageInfo.m_pData = static_cast<uint8_t *>(pMap->GetData(pImg->m_ImageData));
 			char aTexName[IO_MAX_PATH_LENGTH];
 			str_format(aTexName, sizeof(aTexName), "embedded: %s", pName);
@@ -240,20 +255,20 @@ IGraphics::CTextureHandle CMapImages::GetEntities(EMapImageEntityLayerType Entit
 		CImageInfo ImgInfo;
 		char aPath[IO_MAX_PATH_LENGTH];
 		str_format(aPath, sizeof(aPath), "%s/%s.png", m_aEntitiesPath, gs_apModEntitiesNames[EntitiesModType]);
-		Graphics()->LoadPNG(&ImgInfo, aPath, IStorage::TYPE_ALL);
+		Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
 
 		// try as single ddnet replacement
 		if(ImgInfo.m_pData == nullptr && EntitiesModType == MAP_IMAGE_MOD_TYPE_DDNET)
 		{
 			str_format(aPath, sizeof(aPath), "%s.png", m_aEntitiesPath);
-			Graphics()->LoadPNG(&ImgInfo, aPath, IStorage::TYPE_ALL);
+			Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
 		}
 
 		// try default
 		if(ImgInfo.m_pData == nullptr)
 		{
 			str_format(aPath, sizeof(aPath), "editor/entities_clear/%s.png", gs_apModEntitiesNames[EntitiesModType]);
-			Graphics()->LoadPNG(&ImgInfo, aPath, IStorage::TYPE_ALL);
+			Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
 		}
 
 		if(ImgInfo.m_pData != nullptr)
@@ -286,7 +301,7 @@ IGraphics::CTextureHandle CMapImages::GetEntities(EMapImageEntityLayerType Entit
 						const size_t CopyHeight = ImgInfo.m_Height / 16;
 						const size_t OffsetX = (size_t)(TileIndex % 16) * CopyWidth;
 						const size_t OffsetY = (size_t)(TileIndex / 16) * CopyHeight;
-						Graphics()->CopyTextureBufferSub(BuildImageInfo.m_pData, ImgInfo, OffsetX, OffsetY, CopyWidth, CopyHeight);
+						BuildImageInfo.CopyRectFrom(ImgInfo, OffsetX, OffsetY, CopyWidth, CopyHeight, OffsetX, OffsetY);
 					}
 				}
 
@@ -407,7 +422,7 @@ void CMapImages::UpdateEntityLayerText(CImageInfo &TextImage, int TextureSize, i
 	if(MaxNumber == -1)
 		MaxNumber = CurrentNumber * 10 - 1;
 
-	str_from_int(CurrentNumber, aBuf);
+	str_format(aBuf, sizeof(aBuf), "%d", CurrentNumber);
 
 	int CurrentNumberSuitableFontSize = TextRender()->AdjustFontSize(aBuf, DigitsCount, TextureSize, MaxWidth);
 	int UniversalSuitableFontSize = CurrentNumberSuitableFontSize * 0.92f; // should be smoothed enough to fit any digits combination
@@ -416,7 +431,7 @@ void CMapImages::UpdateEntityLayerText(CImageInfo &TextImage, int TextureSize, i
 
 	for(; CurrentNumber <= MaxNumber; ++CurrentNumber)
 	{
-		str_from_int(CurrentNumber, aBuf);
+		str_format(aBuf, sizeof(aBuf), "%d", CurrentNumber);
 
 		float x = (CurrentNumber % 16) * 64;
 		float y = (CurrentNumber / 16) * 64;

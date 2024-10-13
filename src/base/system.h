@@ -219,13 +219,42 @@ bool mem_has_null(const void *block, size_t size);
  */
 enum
 {
+	/**
+	 * Open file for reading.
+	 *
+	 * @see io_open
+	 */
 	IOFLAG_READ = 1,
+	/**
+	 * Open file for writing.
+	 *
+	 * @see io_open
+	 */
 	IOFLAG_WRITE = 2,
+	/**
+	 * Open file for appending at the end.
+	 *
+	 * @see io_open
+	 */
 	IOFLAG_APPEND = 4,
-	IOFLAG_SKIP_BOM = 8,
 
+	/**
+	 * Start seeking from the beginning of the file.
+	 *
+	 * @see io_seek
+	 */
 	IOSEEK_START = 0,
+	/**
+	 * Start seeking from the current position.
+	 *
+	 * @see io_seek
+	 */
 	IOSEEK_CUR = 1,
+	/**
+	 * Start seeking from the end of the file.
+	 *
+	 * @see io_seek
+	 */
 	IOSEEK_END = 2,
 };
 
@@ -237,10 +266,9 @@ enum
  * @param File to open.
  * @param flags A set of IOFLAG flags.
  *
- * @sa IOFLAG_READ, IOFLAG_WRITE, IOFLAG_APPEND, IOFLAG_SKIP_BOM.
+ * @see IOFLAG_READ, IOFLAG_WRITE, IOFLAG_APPEND.
  *
- * @return A handle to the file on success and 0 on failure.
- *
+ * @return A handle to the file on success, or `nullptr` on failure.
  */
 IOHANDLE io_open(const char *filename, int flags);
 
@@ -254,7 +282,6 @@ IOHANDLE io_open(const char *filename, int flags);
  * @param size Number of bytes to read from the file.
  *
  * @return Number of bytes read.
- *
  */
 unsigned io_read(IOHANDLE io, void *buffer, unsigned size);
 
@@ -280,7 +307,7 @@ void io_read_all(IOHANDLE io, void **result, unsigned *result_len);
  *
  * @param io Handle to the file to read data from.
  *
- * @return The file's remaining contents or null on failure.
+ * @return The file's remaining contents, or `nullptr` on failure.
  *
  * @remark Guarantees that there are no internal null bytes.
  * @remark Guarantees that result will contain zero-termination.
@@ -301,7 +328,42 @@ char *io_read_all_str(IOHANDLE io);
 int io_skip(IOHANDLE io, int size);
 
 /**
- * Writes data from a buffer to file.
+ * Seeks to a specified offset in the file.
+ *
+ * @ingroup File-IO
+ *
+ * @param io Handle to the file.
+ * @param offset Offset from position to search.
+ * @param origin Position to start searching from.
+ *
+ * @return `0` on success.
+ */
+int io_seek(IOHANDLE io, int offset, int origin);
+
+/**
+ * Gets the current position in the file.
+ *
+ * @ingroup File-IO
+ *
+ * @param io Handle to the file.
+ *
+ * @return The current position, or `-1` on failure.
+ */
+long int io_tell(IOHANDLE io);
+
+/**
+ * Gets the total length of the file. Resets cursor to the beginning.
+ *
+ * @ingroup File-IO
+ *
+ * @param io Handle to the file.
+ *
+ * @return The total size, or `-1` on failure.
+ */
+long int io_length(IOHANDLE io);
+
+/**
+ * Writes data from a buffer to a file.
  *
  * @ingroup File-IO
  *
@@ -314,50 +376,15 @@ int io_skip(IOHANDLE io, int size);
 unsigned io_write(IOHANDLE io, const void *buffer, unsigned size);
 
 /**
- * Writes a platform dependent newline to file.
+ * Writes a platform dependent newline to a file.
  *
  * @ingroup File-IO
  *
  * @param io Handle to the file.
  *
- * @return true on success, false on failure.
+ * @return `true` on success, `false` on failure.
  */
 bool io_write_newline(IOHANDLE io);
-
-/**
- * Seeks to a specified offset in the file.
- *
- * @ingroup File-IO
- *
- * @param io Handle to the file.
- * @param offset Offset from pos to stop.
- * @param origin Position to start searching from.
- *
- * @return 0 on success.
- */
-int io_seek(IOHANDLE io, int offset, int origin);
-
-/**
- * Gets the current position in the file.
- *
- * @ingroup File-IO
- *
- * @param io Handle to the file.
- *
- * @return The current position. @c -1L if an error occurred.
- */
-long int io_tell(IOHANDLE io);
-
-/**
- * Gets the total length of the file. Resetting cursor to the beginning
- *
- * @ingroup File-IO
- *
- * @param io Handle to the file.
- *
- * @return The total size. @c -1L if an error occurred.
- */
-long int io_length(IOHANDLE io);
 
 /**
  * Closes a file.
@@ -366,7 +393,7 @@ long int io_length(IOHANDLE io);
  *
  * @param io Handle to the file.
  *
- * @return 0 on success.
+ * @return `0` on success.
  */
 int io_close(IOHANDLE io);
 
@@ -377,7 +404,7 @@ int io_close(IOHANDLE io);
  *
  * @param io Handle to the file.
  *
- * @return 0 on success.
+ * @return `0` on success.
  */
 int io_flush(IOHANDLE io);
 
@@ -388,7 +415,7 @@ int io_flush(IOHANDLE io);
  *
  * @param io Handle to the file.
  *
- * @return 0 on success.
+ * @return `0` on success.
  */
 int io_sync(IOHANDLE io);
 
@@ -399,34 +426,57 @@ int io_sync(IOHANDLE io);
  *
  * @param io Handle to the file.
  *
- * @return nonzero on error, 0 otherwise.
+ * @return `0` on success, or non-`0` on error.
  */
 int io_error(IOHANDLE io);
 
 /**
  * @ingroup File-IO
- * @return An <IOHANDLE> to the standard input.
+ *
+ * Returns a handle for the standard input.
+ *
+ * @return An @link IOHANDLE @endlink for the standard input.
+ *
+ * @remark The handle must not be closed.
  */
 IOHANDLE io_stdin();
 
 /**
  * @ingroup File-IO
- * @return An <IOHANDLE> to the standard output.
+ *
+ * Returns a handle for the standard output.
+ *
+ * @return An @link IOHANDLE @endlink for the standard output.
+ *
+ * @remark The handle must not be closed.
  */
 IOHANDLE io_stdout();
 
 /**
  * @ingroup File-IO
- * @return An <IOHANDLE> to the standard error.
+ *
+ * Returns a handle for the standard error.
+ *
+ * @return An @link IOHANDLE @endlink for the standard error.
+ *
+ * @remark The handle must not be closed.
  */
 IOHANDLE io_stderr();
 
 /**
  * @ingroup File-IO
- * @return An <IOHANDLE> to the current executable.
+ *
+ * Returns a handle for the current executable.
+ *
+ * @return An @link IOHANDLE @endlink for the current executable.
  */
 IOHANDLE io_current_exe();
 
+/**
+ * Wrapper for asynchronously writing to an @link IOHANDLE @endlink.
+ *
+ * @ingroup File-IO
+ */
 typedef struct ASYNCIO ASYNCIO;
 
 /**
@@ -437,12 +487,11 @@ typedef struct ASYNCIO ASYNCIO;
  * @param io Handle to the file.
  *
  * @return The handle for asynchronous writing.
- *
  */
 ASYNCIO *aio_new(IOHANDLE io);
 
 /**
- * Locks the ASYNCIO structure so it can't be written into by
+ * Locks the `ASYNCIO` structure so it can't be written into by
  * other threads.
  *
  * @ingroup File-IO
@@ -452,7 +501,7 @@ ASYNCIO *aio_new(IOHANDLE io);
 void aio_lock(ASYNCIO *aio);
 
 /**
- * Unlocks the ASYNCIO structure after finishing the contiguous
+ * Unlocks the `ASYNCIO` structure after finishing the contiguous
  * write.
  *
  * @ingroup File-IO
@@ -478,12 +527,11 @@ void aio_write(ASYNCIO *aio, const void *buffer, unsigned size);
  * @ingroup File-IO
  *
  * @param aio Handle to the file.
- *
  */
 void aio_write_newline(ASYNCIO *aio);
 
 /**
- * Queues a chunk of data for writing. The ASYNCIO struct must be
+ * Queues a chunk of data for writing. The `ASYNCIO` struct must be
  * locked using @link aio_lock @endlink first.
  *
  * @ingroup File-IO
@@ -491,18 +539,16 @@ void aio_write_newline(ASYNCIO *aio);
  * @param aio Handle to the file.
  * @param buffer Pointer to the data that should be written.
  * @param size Number of bytes to write.
- *
  */
 void aio_write_unlocked(ASYNCIO *aio, const void *buffer, unsigned size);
 
 /**
- * Queues a newline for writing. The ASYNCIO struct must be locked
+ * Queues a newline for writing. The `ASYNCIO` struct must be locked
  * using @link aio_lock @endlink first.
  *
  * @ingroup File-IO
  *
  * @param aio Handle to the file.
- *
  */
 void aio_write_newline_unlocked(ASYNCIO *aio);
 
@@ -510,16 +556,15 @@ void aio_write_newline_unlocked(ASYNCIO *aio);
  * Checks whether errors have occurred during the asynchronous
  * writing.
  *
- * Call this function regularly to see if there are errors. Call
- * this function after <aio_wait> to see if the process of writing
+ * Call this function regularly to see if there are errors. Call this
+ * function after @link aio_wait @endlink to see if the process of writing
  * to the file succeeded.
  *
  * @ingroup File-IO
  *
  * @param aio Handle to the file.
  *
- * @eturn 0 if no error occurred, and nonzero on error.
- *
+ * @return `0` on success, or non-`0` on error.
  */
 int aio_error(ASYNCIO *aio);
 
@@ -529,7 +574,6 @@ int aio_error(ASYNCIO *aio);
  * @ingroup File-IO
  *
  * @param aio Handle to the file.
- *
  */
 void aio_close(ASYNCIO *aio);
 
@@ -539,17 +583,15 @@ void aio_close(ASYNCIO *aio);
  * @ingroup File-IO
  *
  * @param aio Handle to the file.
- *
  */
 void aio_wait(ASYNCIO *aio);
 
 /**
- * Frees the resources associated to the asynchronous file handle.
+ * Frees the resources associated with the asynchronous file handle.
  *
  * @ingroup File-IO
  *
  * @param aio Handle to the file.
- *
  */
 void aio_free(ASYNCIO *aio);
 
@@ -698,7 +740,7 @@ int64_t time_freq();
  *
  * @return The time as a UNIX timestamp
  */
-int time_timestamp();
+int64_t time_timestamp();
 
 /**
  * Retrieves the hours since midnight (0..23)
@@ -813,9 +855,11 @@ int net_addr_comp_noport(const NETADDR *a, const NETADDR *b);
  * @param max_length Maximum size of the string.
  * @param add_port add port to string or not
  *
+ * @return true on success
+ *
  * @remark The string will always be zero terminated
  */
-void net_addr_str(const NETADDR *addr, char *string, int max_length, int add_port);
+bool net_addr_str(const NETADDR *addr, char *string, int max_length, int add_port);
 
 /**
  * Turns url string into a network address struct.
@@ -1229,6 +1273,32 @@ int str_format_v(char *buffer, int buffer_size, const char *format, va_list args
 int str_format(char *buffer, int buffer_size, const char *format, ...)
 	GNUC_ATTRIBUTE((format(printf, 3, 4)));
 
+#if !defined(CONF_DEBUG)
+int str_format_int(char *buffer, size_t buffer_size, int value);
+
+template<typename... Args>
+int str_format_opt(char *buffer, int buffer_size, const char *format, Args... args)
+{
+	static_assert(sizeof...(args) > 0, "Use str_copy instead of str_format without format arguments");
+	return str_format(buffer, buffer_size, format, args...);
+}
+
+template<>
+inline int str_format_opt(char *buffer, int buffer_size, const char *format, int val)
+{
+	if(strcmp(format, "%d") == 0)
+	{
+		return str_format_int(buffer, buffer_size, val);
+	}
+	else
+	{
+		return str_format(buffer, buffer_size, format, val);
+	}
+}
+
+#define str_format str_format_opt
+#endif
+
 /**
  * Trims specific number of words at the start of a string.
  *
@@ -1580,6 +1650,22 @@ const char *str_find_nocase(const char *haystack, const char *needle);
 		- The strings are treated as zero-terminated strings.
 */
 const char *str_find(const char *haystack, const char *needle);
+
+/**
+ * @ingroup Strings
+ *
+ * @param haystack String to search in
+ * @param delim String to search for
+ * @param offset Number of characters into the haystack
+ * @param start Will be set to the first delimiter on the left side of the offset (or haystack start)
+ * @param end Will be set to the first delimiter on the right side of the offset (or haystack end)
+ *
+ * @return `true` if both delimiters were found
+ * @return 'false' if a delimiter is missing (it uses haystack start and end as fallback)
+ *
+ * @remark The strings are treated as zero-terminated strings.
+ */
+bool str_delimiters_around_offset(const char *haystay, const char *delim, int offset, int *start, int *end);
 
 /**
  * Finds the last occurrence of a character
@@ -2098,14 +2184,6 @@ int64_t str_toint64_base(const char *str, int base = 10);
 float str_tofloat(const char *str);
 bool str_tofloat(const char *str, float *out);
 
-void str_from_int(int value, char *buffer, size_t buffer_size);
-
-template<size_t N>
-void str_from_int(int value, char (&dst)[N])
-{
-	str_from_int(value, dst, N);
-}
-
 /**
  * Determines whether a character is whitespace.
  *
@@ -2120,6 +2198,8 @@ void str_from_int(int value, char (&dst)[N])
 int str_isspace(char c);
 
 char str_uppercase(char c);
+
+bool str_isnum(char c);
 
 int str_isallnum(const char *str);
 
@@ -2343,6 +2423,22 @@ int str_utf8_encode(char *ptr, int chr);
 int str_utf8_check(const char *str);
 
 /*
+	Function: str_utf8_copy_num
+		Copies a number of utf8 characters from one string to another.
+
+	Parameters:
+		dst - Pointer to a buffer that shall receive the string.
+		src - String to be copied.
+		dst_size - Size of the buffer dst.
+		num - maximum number of utf8 characters to be copied.
+
+	Remarks:
+		- The strings are treated as zero-terminated strings.
+		- Garantees that dst string will contain zero-termination.
+*/
+void str_utf8_copy_num(char *dst, const char *src, int dst_size, int num);
+
+/*
 	Function: str_utf8_stats
 		Determines the byte size and utf8 character count of a utf8 string.
 
@@ -2508,7 +2604,7 @@ typedef pid_t PROCESS;
  */
 constexpr PROCESS INVALID_PROCESS = 0;
 #endif
-
+#if !defined(CONF_PLATFORM_ANDROID)
 /**
  * Determines the initial window state when using @link shell_execute @endlink
  * to execute a process.
@@ -2580,11 +2676,11 @@ bool is_process_alive(PROCESS process);
 int open_link(const char *link);
 
 /**
- * Opens a file or directory with default program.
+ * Opens a file or directory with the default program.
  *
  * @ingroup Shell
  *
- * @param path The path to open.
+ * @param path The file or folder to open with the default program.
  *
  * @return `1` on success, `0` on failure.
  *
@@ -2592,6 +2688,7 @@ int open_link(const char *link);
  * @remark This may not be called with untrusted input or it'll result in arbitrary code execution, especially on Windows.
  */
 int open_file(const char *path);
+#endif // !defined(CONF_PLATFORM_ANDROID)
 
 /**
  * @defgroup Secure-Random
@@ -2618,7 +2715,7 @@ void generate_password(char *buffer, unsigned length, const unsigned short *rand
  *
  * @return `0` on success.
  */
-int secure_random_init();
+[[nodiscard]] int secure_random_init();
 
 /**
  * Uninitializes the secure random module.

@@ -51,7 +51,7 @@ jobs:
         sudo apt-get update -y
         # mount: /var/lib/grub/esp: special device /dev/disk/by-id/scsi-... does not exist.
         # sudo apt-get upgrade -y
-        sudo apt-get install pkg-config cmake ninja-build libfreetype6-dev libnotify-dev libsdl2-dev libsqlite3-dev libvulkan-dev glslang-tools spirv-tools libavcodec-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev libx264-dev libpng-dev valgrind gcovr -y
+        sudo apt-get install pkg-config cmake ninja-build libfreetype6-dev libnotify-dev libsdl2-dev libsqlite3-dev libvulkan-dev glslang-tools spirv-tools libavcodec-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev libx264-dev libpng-dev valgrind gcovr libglew-dev -y
 
     - name: Prepare Linux (non-fancy)
       if: ${{ contains(matrix.os, 'ubuntu') && !matrix.fancy }}
@@ -91,7 +91,7 @@ jobs:
       if: contains(matrix.os, 'macOS')
       run: |
         brew update || true
-        brew install pkg-config sdl2 ffmpeg ninja molten-vk vulkan-headers glslang spirv-tools || true
+        brew install pkg-config sdl2 ffmpeg ninja molten-vk vulkan-headers glslang spirv-tools rust || true
         brew upgrade freetype
         pip3 install --break-system-packages dmgbuild
         echo /Library/Frameworks/Python.framework/Versions/3.12/bin >> $GITHUB_PATH
@@ -153,8 +153,6 @@ jobs:
       if: contains(matrix.os, 'ubuntu-latest')
       uses: codecov/codecov-action@v4
       with:
-        gcov: true
-        gcov_include: src
         flags: unittests
 
     - name: Test headless client (start & connect)
@@ -170,8 +168,6 @@ jobs:
       if: contains(matrix.os, 'ubuntu-latest')
       uses: codecov/codecov-action@v4
       with:
-        gcov: true
-        gcov_include: src
         flags: startconnect
 
     - name: Build in release mode with debug info and all features on
@@ -206,8 +202,6 @@ jobs:
       if: contains(matrix.os, 'ubuntu-latest')
       uses: codecov/codecov-action@v4
       with:
-        gcov: true
-        gcov_include: src
         flags: integrationtests
 
     - name: Package

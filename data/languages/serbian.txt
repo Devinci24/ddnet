@@ -80,7 +80,7 @@ Client
 Connecting to
 == Povezujem se na
 
-Connection Problems...
+Connection Problems…
 == Problemi sa internetom
 
 Console
@@ -280,9 +280,6 @@ Player
 
 Player country:
 == Država igrača
-
-Player options
-== Podešavanja igrača
 
 Players
 == Igrači
@@ -532,9 +529,6 @@ Your skin
 Reset to defaults
 == Resetuj
 
-Round
-== Runda
-
 Lht.
 == Svetl.
 
@@ -688,9 +682,6 @@ Kill
 Pause
 == Pauza
 
-Reload
-== Osveži
-
 Deactivate
 == Deaktiviraj
 
@@ -832,9 +823,6 @@ Assets
 DDNet Client needs to be restarted to complete update!
 == Potrebno je ponovo pokrenuti DDNet klijent da biste dovršili ažuriranje!
 
-Use DDRace Scoreboard
-== Koristi DDRace tabelu rezultata
-
 Show score
 == Prikaži bodove
 
@@ -925,8 +913,8 @@ DDNet %s is available:
 Update now
 == Unapredi sada
 
-Updating...
-== Unapređujem...
+Updating…
+== Unapređujem…
 
 DDNet Client updated!
 == DDNet klijent je unapređen!
@@ -980,8 +968,8 @@ DDNet %s is out!
 Downloading %s:
 == Preuzimanje %s:
 
-Update failed! Check log...
-== Ažuriranje nije uspelo! Sačekajte log...
+Update failed! Check log…
+== Ažuriranje nije uspelo! Sačekajte log…
 
 Restart
 == Ponovo pokreni
@@ -1082,7 +1070,7 @@ Angle:
 Uploading map data to GPU
 == Slanje podataka mape G.J.O.~u (GPU)
 
-Trying to determine UDP connectivity...
+Trying to determine UDP connectivity…
 == Pokušavam da odredim K.D.P.(UDP) povezanost
 
 UDP seems to be filtered.
@@ -1270,9 +1258,6 @@ Show health, shields and ammo
 DDRace HUD
 == DDRace Prikaz
 
-Show client IDs in scoreboard
-== Prikaži identitete na tabli rezultata
-
 Show DDRace HUD
 == Prikaži DDRace Prikaz
 
@@ -1302,9 +1287,6 @@ Use old chat style
 
 Preview
 == Pregled
-
-Show hook strength indicator
-== Prikaži jačinu kuke indikator
 
 Show local player's key presses
 == Prikaži svoje akcije
@@ -1423,10 +1405,10 @@ Initializing components
 == Иницијализација компоненти
 
 Quitting. Please wait…
-== Излазим. Молим вас да почекате...
+== Излазим. Молим вас да почекате…
 
 Restarting. Please wait…
-== Поновно покрећем се. Молим вас да почекате...
+== Поновно покрећем се. Молим вас да почекате…
 
 Multi-View
 == Мулти-поглед
@@ -1658,6 +1640,15 @@ Could not initialize the given graphics backend, reverting to the default backen
 Could not initialize the given graphics backend, this is probably because you didn't install the driver of the integrated graphics card.
 == 
 
+Could not resolve connect address '%s'. See local console for details.
+== 
+
+Connect address error
+== 
+
+Could not connect dummy
+== 
+
 Error playing demo
 == 
 
@@ -1668,6 +1659,9 @@ Saving settings to '%s' failed
 == 
 
 Error saving settings
+== 
+
+Loading demo file from storage
 == 
 
 Searching
@@ -1700,6 +1694,10 @@ Following
 Loading commands…
 == 
 
+[Spectating]
+Following %s
+== 
+
 Some map images could not be loaded. Check the local console for details.
 == 
 
@@ -1721,6 +1719,12 @@ Render complete
 Are you sure that you want to restart?
 == 
 
+Save skin
+== 
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
+== 
+
 There's an unsaved map in the editor, you might want to save it.
 == 
 
@@ -1731,6 +1735,24 @@ Videos directory
 == 
 
 Video was saved to '%s'
+== 
+
+Unable to save the skin
+== 
+
+Unable to save the skin with a reserved name
+== 
+
+%d/%d KiB (%.1f KiB/s)
+== 
+
+No local servers found (ports %d-%d)
+== 
+
+Example of usage
+== 
+
+No login required
 == 
 
 Communities
@@ -1778,6 +1800,12 @@ Netversion
 map not included
 == 
 
+Dummy is not allowed on this server
+== 
+
+Please wait…
+== 
+
 Loading…
 == 
 
@@ -1790,10 +1818,29 @@ Activate all
 Deactivate all
 == 
 
+[Hertz]
+Hz
+== 
+
+Player info change cooldown
+== 
+
+Tee
+== 
+
 Info Messages
 == 
 
 Show local time always
+== 
+
+Show client IDs (scoreboard, chat, spectator)
+== 
+
+Always show chat
+== 
+
+Show only chat messages from team members
 == 
 
 Chat font size
@@ -1802,10 +1849,28 @@ Chat font size
 Chat width
 == 
 
+Show friend mark (♥) in name plates
+== 
+
+Show hook strength icon indicator
+== 
+
+Show hook strength number indicator
+== 
+
 Authed name color in scoreboard
 == 
 
 Same clan color in scoreboard
+== 
+
+Show own player's hook collision line
+== 
+
+Always show own player's hook collision line
+== 
+
+Always show other players' hook collision lines
 == 
 
 Show finish messages
@@ -1821,4 +1886,60 @@ Regular background color
 == 
 
 Entities background color
+== 
+
+Basic
+== 
+
+Custom
+== 
+
+Are you sure that you want to delete '%s'?
+== 
+
+Delete skin
+== 
+
+Unable to delete skin
+== 
+
+Round %d/%d
+== 
+
+[Spectators]
+%d others…
+== 
+
+[Team and size]
+%d\n(%d/%d)
+== 
+
+Team %d (%d/%d)
+== 
+
+[skins]
+Body
+== 
+
+[skins]
+Marking
+== 
+
+[skins]
+Decoration
+== 
+
+[skins]
+Hands
+== 
+
+[skins]
+Feet
+== 
+
+[skins]
+Eyes
+== 
+
+https://wiki.ddnet.org/wiki/Mapping
 == 

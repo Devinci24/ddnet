@@ -120,7 +120,6 @@ enum
 	COREEVENT_HOOK_ATTACH_GROUND = 0x10,
 	COREEVENT_HOOK_HIT_NOHOOK = 0x20,
 	COREEVENT_HOOK_RETRACT = 0x40,
-	// COREEVENT_HOOK_TELE=0x80,
 };
 
 // show others values - do not change them
@@ -257,6 +256,7 @@ public:
 	bool m_ShotgunHitDisabled;
 	bool m_HookHitDisabled;
 	bool m_Super;
+	bool m_Invincible;
 	bool m_HasTelegunGun;
 	bool m_HasTelegunGrenade;
 	bool m_HasTelegunLaser;

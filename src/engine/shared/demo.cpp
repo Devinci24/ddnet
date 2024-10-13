@@ -316,6 +316,8 @@ void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size)
 
 		// create delta
 		char aDeltaData[CSnapshot::MAX_SIZE + sizeof(int)];
+		m_pSnapshotDelta->SetStaticsize(protocol7::NETEVENTTYPE_SOUNDWORLD, true);
+		m_pSnapshotDelta->SetStaticsize(protocol7::NETEVENTTYPE_DAMAGE, true);
 		const int DeltaSize = m_pSnapshotDelta->CreateDelta((CSnapshot *)m_aLastSnapshotData, (CSnapshot *)pData, &aDeltaData);
 		if(DeltaSize)
 		{
@@ -493,15 +495,15 @@ CDemoPlayer::EReadChunkHeaderResult CDemoPlayer::ReadChunkHeader(int *pType, int
 	if(Chunk & CHUNKTYPEFLAG_TICKMARKER)
 	{
 		// decode tick marker
-		int Tickdelta_legacy = Chunk & CHUNKMASK_TICK_LEGACY; // compatibility
+		int TickdeltaLegacy = Chunk & CHUNKMASK_TICK_LEGACY; // compatibility
 		*pType = Chunk & (CHUNKTYPEFLAG_TICKMARKER | CHUNKTICKFLAG_KEYFRAME);
 
 		int NewTick;
-		if(m_Info.m_Header.m_Version < gs_VersionTickCompression && Tickdelta_legacy != 0)
+		if(m_Info.m_Header.m_Version < gs_VersionTickCompression && TickdeltaLegacy != 0)
 		{
 			if(*pTick < 0) // initial tick not initialized before a tick delta
 				return CHUNKHEADER_ERROR;
-			NewTick = *pTick + Tickdelta_legacy;
+			NewTick = *pTick + TickdeltaLegacy;
 		}
 		else if(Chunk & CHUNKTICKFLAG_TICK_COMPRESSED)
 		{
@@ -665,7 +667,7 @@ void CDemoPlayer::DoTick()
 				break;
 			}
 
-			DataSize = CVariableInt::Decompress(m_aDecompressedSnapshotData, DataSize, m_aCurrentSnapshotData, sizeof(m_aCurrentSnapshotData));
+			DataSize = CVariableInt::Decompress(m_aDecompressedSnapshotData, DataSize, m_aChunkData, sizeof(m_aChunkData));
 			if(DataSize < 0)
 			{
 				Stop("Error during intpack decompression");
@@ -676,8 +678,8 @@ void CDemoPlayer::DoTick()
 		if(ChunkType == CHUNKTYPE_DELTA)
 		{
 			// process delta snapshot
-			CSnapshot *pNewsnap = (CSnapshot *)m_aDeltaSnapshotData;
-			DataSize = m_pSnapshotDelta->UnpackDelta((CSnapshot *)m_aLastSnapshotData, pNewsnap, m_aCurrentSnapshotData, DataSize);
+			CSnapshot *pNewsnap = (CSnapshot *)m_aSnapshot;
+			DataSize = m_pSnapshotDelta->UnpackDelta((CSnapshot *)m_aLastSnapshotData, pNewsnap, m_aChunkData, DataSize, IsSixup());
 
 			if(DataSize < 0)
 			{
@@ -700,17 +702,17 @@ void CDemoPlayer::DoTick()
 			else
 			{
 				if(m_pListener)
-					m_pListener->OnDemoPlayerSnapshot(m_aDeltaSnapshotData, DataSize);
+					m_pListener->OnDemoPlayerSnapshot(m_aSnapshot, DataSize);
 
 				m_LastSnapshotDataSize = DataSize;
-				mem_copy(m_aLastSnapshotData, m_aDeltaSnapshotData, DataSize);
+				mem_copy(m_aLastSnapshotData, m_aSnapshot, DataSize);
 				GotSnapshot = true;
 			}
 		}
 		else if(ChunkType == CHUNKTYPE_SNAPSHOT)
 		{
 			// process full snapshot
-			CSnapshot *pSnap = (CSnapshot *)m_aCurrentSnapshotData;
+			CSnapshot *pSnap = (CSnapshot *)m_aChunkData;
 			if(!pSnap->IsValid(DataSize))
 			{
 				if(m_pConsole)
@@ -725,9 +727,9 @@ void CDemoPlayer::DoTick()
 				GotSnapshot = true;
 
 				m_LastSnapshotDataSize = DataSize;
-				mem_copy(m_aLastSnapshotData, m_aCurrentSnapshotData, DataSize);
+				mem_copy(m_aLastSnapshotData, m_aChunkData, DataSize);
 				if(m_pListener)
-					m_pListener->OnDemoPlayerSnapshot(m_aCurrentSnapshotData, DataSize);
+					m_pListener->OnDemoPlayerSnapshot(m_aChunkData, DataSize);
 			}
 		}
 		else
@@ -748,7 +750,7 @@ void CDemoPlayer::DoTick()
 			else if(ChunkType == CHUNKTYPE_MESSAGE)
 			{
 				if(m_pListener)
-					m_pListener->OnDemoPlayerMessage(m_aCurrentSnapshotData, DataSize);
+					m_pListener->OnDemoPlayerMessage(m_aChunkData, DataSize);
 			}
 		}
 	}
@@ -803,6 +805,7 @@ int CDemoPlayer::Load(class IStorage *pStorage, class IConsole *pConsole, const 
 		str_copy(m_aFilename, "");
 		return -1;
 	}
+	m_Sixup = str_startswith(m_Info.m_Header.m_aNetversion, "0.7");
 
 	// save byte offset of map for later use
 	m_MapOffset = io_tell(m_File);
@@ -1217,9 +1220,8 @@ public:
 	}
 };
 
-void CDemoEditor::Init(const char *pNetVersion, class CSnapshotDelta *pSnapshotDelta, class IConsole *pConsole, class IStorage *pStorage)
+void CDemoEditor::Init(class CSnapshotDelta *pSnapshotDelta, class IConsole *pConsole, class IStorage *pStorage)
 {
-	m_pNetVersion = pNetVersion;
 	m_pSnapshotDelta = pSnapshotDelta;
 	m_pConsole = pConsole;
 	m_pStorage = pStorage;
@@ -1243,7 +1245,7 @@ bool CDemoEditor::Slice(const char *pDemo, const char *pDst, int StartTick, int 
 
 	CDemoRecorder DemoRecorder(m_pSnapshotDelta);
 	unsigned char *pMapData = DemoPlayer.GetMapData(m_pStorage);
-	const int Result = DemoRecorder.Start(m_pStorage, m_pConsole, pDst, m_pNetVersion, pMapInfo->m_aName, Sha256, pMapInfo->m_Crc, pInfo->m_Header.m_aType, pMapInfo->m_Size, pMapData, nullptr, pfnFilter, pUser) == -1;
+	const int Result = DemoRecorder.Start(m_pStorage, m_pConsole, pDst, pInfo->m_Header.m_aNetversion, pMapInfo->m_aName, Sha256, pMapInfo->m_Crc, pInfo->m_Header.m_aType, pMapInfo->m_Size, pMapData, nullptr, pfnFilter, pUser) == -1;
 	free(pMapData);
 	if(Result != 0)
 	{

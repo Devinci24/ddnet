@@ -14,6 +14,7 @@
 #include <engine/config.h>
 #include <engine/editor.h>
 #include <engine/friends.h>
+#include <engine/gfx/image_manipulation.h>
 #include <engine/graphics.h>
 #include <engine/keys.h>
 #include <engine/serverbrowser.h>
@@ -462,78 +463,54 @@ int CMenus::DoButton_CheckBox(const void *pId, const char *pText, int Checked, c
 int CMenus::DoButton_CheckBox_Number(const void *pId, const char *pText, int Checked, const CUIRect *pRect)
 {
 	char aBuf[16];
-	str_from_int(Checked, aBuf);
+	str_format(aBuf, sizeof(aBuf), "%d", Checked);
 	return DoButton_CheckBox_Common(pId, pText, aBuf, pRect);
 }
 
 int CMenus::DoKeyReader(const void *pId, const CUIRect *pRect, int Key, int ModifierCombination, int *pNewModifierCombination)
 {
-	// process
-	static const void *s_pGrabbedId = nullptr;
-	static bool s_MouseReleased = true;
-	static int s_ButtonUsed = 0;
-	const bool Inside = Ui()->MouseHovered(pRect);
 	int NewKey = Key;
 	*pNewModifierCombination = ModifierCombination;
 
-	if(!Ui()->MouseButton(0) && !Ui()->MouseButton(1) && s_pGrabbedId == pId)
-		s_MouseReleased = true;
-
-	if(Ui()->CheckActiveItem(pId))
+	const int ButtonResult = Ui()->DoButtonLogic(pId, 0, pRect);
+	if(ButtonResult == 1)
 	{
-		if(m_Binder.m_GotKey)
-		{
-			// abort with escape key
-			if(m_Binder.m_Key.m_Key != KEY_ESCAPE)
-			{
-				NewKey = m_Binder.m_Key.m_Key;
-				*pNewModifierCombination = m_Binder.m_ModifierCombination;
-			}
-			m_Binder.m_GotKey = false;
-			Ui()->SetActiveItem(nullptr);
-			s_MouseReleased = false;
-			s_pGrabbedId = pId;
-		}
-
-		if(s_ButtonUsed == 1 && !Ui()->MouseButton(1))
-		{
-			if(Inside)
-				NewKey = 0;
-			Ui()->SetActiveItem(nullptr);
-		}
+		m_Binder.m_pKeyReaderId = pId;
+		m_Binder.m_TakeKey = true;
+		m_Binder.m_GotKey = false;
 	}
-	else if(Ui()->HotItem() == pId)
+	else if(ButtonResult == 2)
 	{
-		if(s_MouseReleased)
-		{
-			if(Ui()->MouseButton(0))
-			{
-				m_Binder.m_TakeKey = true;
-				m_Binder.m_GotKey = false;
-				Ui()->SetActiveItem(pId);
-				s_ButtonUsed = 0;
-			}
-
-			if(Ui()->MouseButton(1))
-			{
-				Ui()->SetActiveItem(pId);
-				s_ButtonUsed = 1;
-			}
-		}
+		NewKey = 0;
+		*pNewModifierCombination = CBinds::MODIFIER_NONE;
 	}
 
-	if(Inside)
-		Ui()->SetHotItem(pId);
+	if(m_Binder.m_pKeyReaderId == pId && m_Binder.m_GotKey)
+	{
+		// abort with escape key
+		if(m_Binder.m_Key.m_Key != KEY_ESCAPE)
+		{
+			NewKey = m_Binder.m_Key.m_Key;
+			*pNewModifierCombination = m_Binder.m_ModifierCombination;
+		}
+		m_Binder.m_pKeyReaderId = nullptr;
+		m_Binder.m_GotKey = false;
+		Ui()->SetActiveItem(nullptr);
+	}
 
 	char aBuf[64];
-	if(Ui()->CheckActiveItem(pId) && s_ButtonUsed == 0)
+	if(m_Binder.m_pKeyReaderId == pId && m_Binder.m_TakeKey)
 		str_copy(aBuf, Localize("Press a key…"));
 	else if(NewKey == 0)
 		aBuf[0] = '\0';
 	else
-		str_format(aBuf, sizeof(aBuf), "%s%s", CBinds::GetKeyBindModifiersName(*pNewModifierCombination), Input()->KeyName(NewKey));
+	{
+		char aModifiers[128];
+		CBinds::GetKeyBindModifiersName(*pNewModifierCombination, aModifiers, sizeof(aModifiers));
+		str_format(aBuf, sizeof(aBuf), "%s%s", aModifiers, Input()->KeyName(NewKey));
+	}
 
-	const ColorRGBA Color = Ui()->CheckActiveItem(pId) && m_Binder.m_TakeKey ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.4f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f * Ui()->ButtonColorMul(pId));
+	const ColorRGBA Color = m_Binder.m_pKeyReaderId == pId && m_Binder.m_TakeKey ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.4f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f * Ui()->ButtonColorMul(pId));
 	pRect->Draw(Color, IGraphics::CORNER_ALL, 5.0f);
 	CUIRect Temp;
 	pRect->HMargin(1.0f, &Temp);
@@ -683,6 +660,27 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		}
 		GameClient()->m_Tooltips.DoToolTip(&s_FavoritesButton, &Button, Localize("Favorites"));
 
+		int MaxPage = PAGE_FAVORITES + ServerBrowser()->FavoriteCommunities().size();
+		if(
+			!Ui()->IsPopupOpen() &&
+			CLineInput::GetActiveInput() == nullptr &&
+			(g_Config.m_UiPage >= PAGE_INTERNET && g_Config.m_UiPage <= MaxPage) &&
+			(m_MenuPage >= PAGE_INTERNET && m_MenuPage <= PAGE_FAVORITE_COMMUNITY_5))
+		{
+			if(Input()->KeyPress(KEY_RIGHT))
+			{
+				NewPage = g_Config.m_UiPage + 1;
+				if(NewPage > MaxPage)
+					NewPage = PAGE_INTERNET;
+			}
+			if(Input()->KeyPress(KEY_LEFT))
+			{
+				NewPage = g_Config.m_UiPage - 1;
+				if(NewPage < PAGE_INTERNET)
+					NewPage = MaxPage;
+			}
+		}
+
 		size_t FavoriteCommunityIndex = 0;
 		static CButtonContainer s_aFavoriteCommunityButtons[5];
 		static_assert(std::size(s_aFavoriteCommunityButtons) == (size_t)PAGE_FAVORITE_COMMUNITY_5 - PAGE_FAVORITE_COMMUNITY_1 + 1);
@@ -762,56 +760,58 @@ void CMenus::RenderLoading(const char *pCaption, const char *pContent, int Incre
 {
 	// TODO: not supported right now due to separate render thread
 
-	static std::chrono::nanoseconds s_LastLoadRender{0};
-	const int CurLoadRenderCount = m_LoadCurrent;
-	m_LoadCurrent += IncreaseCounter;
-	const float Percent = CurLoadRenderCount / (float)m_LoadTotal;
+	const int CurLoadRenderCount = m_LoadingState.m_Current;
+	m_LoadingState.m_Current += IncreaseCounter;
 
 	// make sure that we don't render for each little thing we load
 	// because that will slow down loading if we have vsync
-	if(time_get_nanoseconds() - s_LastLoadRender < std::chrono::nanoseconds(1s) / 60l)
+	const std::chrono::nanoseconds Now = time_get_nanoseconds();
+	if(Now - m_LoadingState.m_LastRender < std::chrono::nanoseconds(1s) / 60l)
 		return;
 
-	s_LastLoadRender = time_get_nanoseconds();
+	m_LoadingState.m_LastRender = Now;
 
 	// need up date this here to get correct
 	ms_GuiColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_UiColor, true));
 
 	Ui()->MapScreen();
 
-	if(!RenderMenuBackgroundMap || !m_pBackground->Render())
+	if(!RenderMenuBackgroundMap || !GameClient()->m_MenuBackground.Render())
 	{
 		RenderBackground();
 	}
 
-	CUIRect Box = *Ui()->Screen();
-	Box.Margin(160.0f, &Box);
+	CUIRect Box;
+	Ui()->Screen()->Margin(160.0f, &Box);
 
 	Graphics()->BlendNormal();
-
 	Graphics()->TextureClear();
-	Box.Draw(ColorRGBA{0, 0, 0, 0.50f}, IGraphics::CORNER_ALL, 15.0f);
+	Box.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_ALL, 15.0f);
+	Box.Margin(20.0f, &Box);
 
-	CUIRect Part;
-	Box.HSplitTop(20.f, nullptr, &Box);
-	Box.HSplitTop(24.f, &Part, &Box);
-	Part.VMargin(20.f, &Part);
-	Ui()->DoLabel(&Part, pCaption, 24.f, TEXTALIGN_MC);
+	CUIRect Label;
+	Box.HSplitTop(24.0f, &Label, &Box);
+	Ui()->DoLabel(&Label, pCaption, 24.0f, TEXTALIGN_MC);
 
-	Box.HSplitTop(20.f, nullptr, &Box);
-	Box.HSplitTop(24.f, &Part, &Box);
-	Part.VMargin(20.f, &Part);
-	Ui()->DoLabel(&Part, pContent, 20.0f, TEXTALIGN_MC);
+	Box.HSplitTop(20.0f, nullptr, &Box);
+	Box.HSplitTop(24.0f, &Label, &Box);
+	Ui()->DoLabel(&Label, pContent, 20.0f, TEXTALIGN_MC);
 
 	if(RenderLoadingBar)
-		Graphics()->DrawRect(Box.x + 40, Box.y + Box.h - 75, (Box.w - 80) * Percent, 25, ColorRGBA(1.0f, 1.0f, 1.0f, 0.75f), IGraphics::CORNER_ALL, 5.0f);
+	{
+		CUIRect ProgressBar;
+		Box.HSplitBottom(30.0f, &Box, nullptr);
+		Box.HSplitBottom(25.0f, &Box, &ProgressBar);
+		ProgressBar.VMargin(20.0f, &ProgressBar);
+		Ui()->RenderProgressBar(ProgressBar, CurLoadRenderCount / (float)m_LoadingState.m_Total);
+	}
 
 	Client()->UpdateAndSwap();
 }
 
 void CMenus::RenderNews(CUIRect MainView)
 {
-	m_pBackground->ChangePosition(CMenuBackground::POS_NEWS);
+	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_NEWS);
 
 	g_Config.m_UiUnreadNews = false;
 
@@ -895,10 +895,10 @@ void CMenus::OnInit()
 
 	// setup load amount
 	const int NumMenuImages = 5;
-	m_LoadCurrent = 0;
-	m_LoadTotal = g_pData->m_NumImages + NumMenuImages + GameClient()->ComponentCount();
+	m_LoadingState.m_Current = 0;
+	m_LoadingState.m_Total = g_pData->m_NumImages + NumMenuImages + GameClient()->ComponentCount();
 	if(!g_Config.m_ClThreadsoundloading)
-		m_LoadTotal += g_pData->m_NumSounds;
+		m_LoadingState.m_Total += g_pData->m_NumSounds;
 
 	m_IsInit = true;
 
@@ -909,6 +909,11 @@ void CMenus::OnInit()
 	// load community icons
 	m_vCommunityIcons.clear();
 	Storage()->ListDirectory(IStorage::TYPE_ALL, "communityicons", CommunityIconScan, this);
+
+	// Quad for the direction arrows above the player
+	m_DirectionQuadContainerIndex = Graphics()->CreateQuadContainer(false);
+	RenderTools()->QuadContainerAddSprite(m_DirectionQuadContainerIndex, 0.f, 0.f, 22.f);
+	Graphics()->QuadContainerUpload(m_DirectionQuadContainerIndex);
 }
 
 void CMenus::OnConsoleInit()
@@ -924,14 +929,9 @@ void CMenus::ConchainBackgroundEntities(IConsole::IResult *pResult, void *pUserD
 	if(pResult->NumArguments())
 	{
 		CMenus *pSelf = (CMenus *)pUserData;
-		pSelf->UpdateBackgroundEntities();
+		if(str_comp(g_Config.m_ClBackgroundEntities, pSelf->m_pClient->m_Background.MapName()) != 0)
+			pSelf->m_pClient->m_Background.LoadBackground();
 	}
-}
-
-void CMenus::UpdateBackgroundEntities()
-{
-	if(str_comp(g_Config.m_ClBackgroundEntities, m_pClient->m_Background.MapName()) != 0)
-		m_pClient->m_Background.LoadBackground();
 }
 
 void CMenus::ConchainUpdateMusicState(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
@@ -1069,7 +1069,7 @@ void CMenus::Render()
 	}
 	else
 	{
-		if(!m_pBackground->Render())
+		if(!GameClient()->m_MenuBackground.Render())
 		{
 			RenderBackground();
 		}
@@ -1200,6 +1200,12 @@ void CMenus::Render()
 
 	Ui()->RenderPopupMenus();
 
+	// Prevent UI elements from being hovered while a key reader is active
+	if(m_Binder.m_TakeKey)
+	{
+		Ui()->SetHotItem(nullptr);
+	}
+
 	// Handle this escape hotkey after popup menus
 	if(!m_ShowStart && ClientState == IClient::STATE_OFFLINE && Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
 	{
@@ -1229,7 +1235,7 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		pButtonText = Localize("Ok");
 		if(Client()->ReconnectTime() > 0)
 		{
-			str_format(aBuf, sizeof(aBuf), Localize("Reconnect in %d sec"), (int)((Client()->ReconnectTime() - time_get()) / time_freq()));
+			str_format(aBuf, sizeof(aBuf), Localize("Reconnect in %d sec"), (int)((Client()->ReconnectTime() - time_get()) / time_freq()) + 1);
 			pTitle = Client()->ErrorString();
 			pExtraText = aBuf;
 			pButtonText = Localize("Abort");
@@ -1302,6 +1308,11 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		pExtraText = m_aMessageBody;
 		pButtonText = m_aMessageButton;
 		TopAlign = true;
+	}
+	else if(m_Popup == POPUP_SAVE_SKIN)
+	{
+		pTitle = Localize("Save skin");
+		pExtraText = Localize("Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.");
 	}
 
 	CUIRect Box, Part;
@@ -1415,7 +1426,7 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 	}
 	else if(m_Popup == POPUP_PASSWORD)
 	{
-		CUIRect Label, TextBox, TryAgain, Abort;
+		CUIRect AddressLabel, Address, Icon, Name, Label, TextBox, TryAgain, Abort;
 
 		Box.HSplitBottom(20.f, &Box, &Part);
 		Box.HSplitBottom(24.f, &Box, &Part);
@@ -1430,13 +1441,14 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		if(DoButton_Menu(&s_ButtonAbort, Localize("Abort"), 0, &Abort) || Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
 			m_Popup = POPUP_NONE;
 
+		char aAddr[NETADDR_MAXSTRSIZE];
+		net_addr_str(&Client()->ServerAddress(), aAddr, sizeof(aAddr), true);
+
 		static CButtonContainer s_ButtonTryAgain;
 		if(DoButton_Menu(&s_ButtonTryAgain, Localize("Try again"), 0, &TryAgain) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER))
-		{
-			Client()->Connect(g_Config.m_UiServerAddress, g_Config.m_Password);
-		}
+			Client()->Connect(aAddr, g_Config.m_Password);
 
-		Box.HSplitBottom(60.f, &Box, &Part);
+		Box.HSplitBottom(32.f, &Box, &Part);
 		Box.HSplitBottom(24.f, &Box, &Part);
 
 		Part.VSplitLeft(60.0f, 0, &Label);
@@ -1445,6 +1457,35 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		TextBox.VSplitRight(60.0f, &TextBox, 0);
 		Ui()->DoLabel(&Label, Localize("Password"), 18.0f, TEXTALIGN_ML);
 		Ui()->DoClearableEditBox(&m_PasswordInput, &TextBox, 12.0f);
+
+		Box.HSplitBottom(32.f, &Box, &Part);
+		Box.HSplitBottom(24.f, &Box, &Part);
+
+		Part.VSplitLeft(60.0f, 0, &AddressLabel);
+		AddressLabel.VSplitLeft(100.0f, 0, &Address);
+		Address.VSplitLeft(20.0f, 0, &Address);
+		Ui()->DoLabel(&AddressLabel, Localize("Address"), 18.0f, TEXTALIGN_ML);
+		Ui()->DoLabel(&Address, aAddr, 18.0f, TEXTALIGN_ML);
+
+		Box.HSplitBottom(32.f, &Box, &Part);
+		Box.HSplitBottom(24.f, &Box, &Part);
+
+		const CServerBrowser::CServerEntry *pEntry = ServerBrowser()->Find(Client()->ServerAddress());
+		if(pEntry != nullptr && pEntry->m_GotInfo)
+		{
+			Part.VSplitLeft(60.0f, 0, &Icon);
+			Icon.VSplitLeft(100.0f, 0, &Name);
+			Icon.VSplitLeft(80.0f, &Icon, 0);
+			Name.VSplitLeft(20.0f, 0, &Name);
+
+			const SCommunityIcon *pIcon = FindCommunityIcon(pEntry->m_Info.m_aCommunityId);
+			if(pIcon != nullptr)
+				RenderCommunityIcon(pIcon, Icon, true);
+			else
+				Ui()->DoLabel(&Icon, Localize("Name"), 18.0f, TEXTALIGN_ML);
+
+			Ui()->DoLabel(&Name, pEntry->m_Info.m_aName, 18.0f, TEXTALIGN_ML);
+		}
 	}
 	else if(m_Popup == POPUP_LANGUAGE)
 	{
@@ -1643,10 +1684,7 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		static CButtonContainer s_ButtonOpenFolder;
 		if(DoButton_Menu(&s_ButtonOpenFolder, Localize("Videos directory"), 0, &OpenFolder))
 		{
-			if(!open_file(aSaveFolder))
-			{
-				dbg_msg("menus", "couldn't open file '%s'", aSaveFolder);
-			}
+			Client()->ViewFile(aSaveFolder);
 		}
 
 		static CButtonContainer s_ButtonOk;
@@ -1750,6 +1788,52 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			SetActive(false);
 		}
 	}
+	else if(m_Popup == POPUP_SAVE_SKIN)
+	{
+		CUIRect Label, TextBox, Yes, No;
+
+		Box.HSplitBottom(20.f, &Box, &Part);
+		Box.HSplitBottom(24.f, &Box, &Part);
+		Part.VMargin(80.0f, &Part);
+
+		Part.VSplitMid(&No, &Yes);
+
+		Yes.VMargin(20.0f, &Yes);
+		No.VMargin(20.0f, &No);
+
+		static CButtonContainer s_ButtonNo;
+		if(DoButton_Menu(&s_ButtonNo, Localize("No"), 0, &No) || Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
+			m_Popup = POPUP_NONE;
+
+		static CButtonContainer s_ButtonYes;
+		if(DoButton_Menu(&s_ButtonYes, Localize("Yes"), m_SkinNameInput.IsEmpty() ? 1 : 0, &Yes) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER))
+		{
+			if(m_SkinNameInput.GetLength())
+			{
+				if(m_SkinNameInput.GetString()[0] != 'x' && m_SkinNameInput.GetString()[1] != '_')
+				{
+					if(m_pClient->m_Skins7.SaveSkinfile(m_SkinNameInput.GetString(), m_Dummy))
+					{
+						m_Popup = POPUP_NONE;
+						m_SkinListNeedsUpdate = true;
+					}
+					else
+						PopupMessage(Localize("Error"), Localize("Unable to save the skin"), Localize("Ok"), POPUP_SAVE_SKIN);
+				}
+				else
+					PopupMessage(Localize("Error"), Localize("Unable to save the skin with a reserved name"), Localize("Ok"), POPUP_SAVE_SKIN);
+			}
+		}
+
+		Box.HSplitBottom(60.f, &Box, &Part);
+		Box.HSplitBottom(24.f, &Box, &Part);
+
+		Part.VMargin(60.0f, &Label);
+		Label.VSplitLeft(100.0f, &Label, &TextBox);
+		TextBox.VSplitLeft(20.0f, nullptr, &TextBox);
+		Ui()->DoLabel(&Label, Localize("Name"), 18.0f, TEXTALIGN_ML);
+		Ui()->DoClearableEditBox(&m_SkinNameInput, &TextBox, 12.0f);
+	}
 	else
 	{
 		Box.HSplitBottom(20.f, &Box, &Part);
@@ -1796,7 +1880,7 @@ void CMenus::RenderPopupConnecting(CUIRect Screen)
 		case IClient::CONNECTIVITY_UNKNOWN:
 			break;
 		case IClient::CONNECTIVITY_CHECKING:
-			pConnectivityLabel = Localize("Trying to determine UDP connectivity...");
+			pConnectivityLabel = Localize("Trying to determine UDP connectivity…");
 			break;
 		case IClient::CONNECTIVITY_UNREACHABLE:
 			pConnectivityLabel = Localize("UDP seems to be filtered.");
@@ -1863,7 +1947,7 @@ void CMenus::RenderPopupLoading(CUIRect Screen)
 
 		str_format(aTitle, sizeof(aTitle), "%s: %s", Localize("Downloading map"), Client()->MapDownloadName());
 
-		str_format(aLabel1, sizeof(aLabel1), "%d/%d KiB (%.1f KiB/s)", Client()->MapDownloadAmount() / 1024, Client()->MapDownloadTotalsize() / 1024, m_DownloadSpeed / 1024.0f);
+		str_format(aLabel1, sizeof(aLabel1), Localize("%d/%d KiB (%.1f KiB/s)"), Client()->MapDownloadAmount() / 1024, Client()->MapDownloadTotalsize() / 1024, m_DownloadSpeed / 1024.0f);
 
 		const int SecondsLeft = maximum(1, m_DownloadSpeed > 0.0f ? static_cast<int>((Client()->MapDownloadTotalsize() - Client()->MapDownloadAmount()) / m_DownloadSpeed) : 1);
 		const int MinutesLeft = SecondsLeft / 60;
@@ -1935,9 +2019,7 @@ void CMenus::RenderPopupLoading(CUIRect Screen)
 		Box.HSplitTop(20.0f, nullptr, &Box);
 		Box.HSplitTop(24.0f, &ProgressBar, &Box);
 		ProgressBar.VMargin(20.0f, &ProgressBar);
-		ProgressBar.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 5.0f);
-		ProgressBar.w = maximum(10.0f, (ProgressBar.w * Client()->MapDownloadAmount()) / Client()->MapDownloadTotalsize());
-		ProgressBar.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), IGraphics::CORNER_ALL, 5.0f);
+		Ui()->RenderProgressBar(ProgressBar, Client()->MapDownloadAmount() / (float)Client()->MapDownloadTotalsize());
 	}
 
 	CUIRect Button;
@@ -1960,8 +2042,6 @@ void CMenus::PopupConfirmDemoReplaceVideo()
 	str_format(aBuf, sizeof(aBuf), "%s/%s.demo", m_aCurrentDemoFolder, m_aCurrentDemoSelectionName);
 	char aVideoName[IO_MAX_PATH_LENGTH];
 	str_copy(aVideoName, m_DemoRenderInput.GetString());
-	if(!str_endswith(aVideoName, ".mp4"))
-		str_append(aVideoName, ".mp4");
 	const char *pError = Client()->DemoPlayer_Render(aBuf, m_DemolistStorageType, aVideoName, m_Speed, m_StartPaused);
 	m_Speed = 4;
 	m_StartPaused = false;
@@ -1977,7 +2057,7 @@ void CMenus::PopupConfirmDemoReplaceVideo()
 
 void CMenus::RenderThemeSelection(CUIRect MainView)
 {
-	const std::vector<CTheme> &vThemes = m_pBackground->GetThemes();
+	const std::vector<CTheme> &vThemes = GameClient()->m_MenuBackground.GetThemes();
 
 	int SelectedTheme = -1;
 	for(int i = 0; i < (int)vThemes.size(); i++)
@@ -2043,7 +2123,7 @@ void CMenus::RenderThemeSelection(CUIRect MainView)
 	{
 		const CTheme &Theme = vThemes[SelectedTheme];
 		str_copy(g_Config.m_ClMenuMap, Theme.m_Name.c_str());
-		m_pBackground->LoadMenuBackground(Theme.m_HasDay, Theme.m_HasNight);
+		GameClient()->m_MenuBackground.LoadMenuBackground(Theme.m_HasDay, Theme.m_HasNight);
 	}
 }
 
@@ -2200,7 +2280,7 @@ void CMenus::OnRender()
 
 	// render debug information
 	if(g_Config.m_Debug)
-		Ui()->DebugRender();
+		Ui()->DebugRender(2.0f, Ui()->Screen()->h - 12.0f);
 
 	if(Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
 		SetActive(false);
@@ -2256,14 +2336,16 @@ void CMenus::RenderBackground()
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(0.0f, 0.0f, 0.0f, 0.045f);
 	const float Size = 15.0f;
-	const float OffsetTime = std::fmod(LocalTime() * 0.15f, 2.0f);
+	const float OffsetTime = std::fmod(Client()->GlobalTime() * 0.15f, 2.0f);
 	IGraphics::CQuadItem aCheckerItems[64];
 	size_t NumCheckerItems = 0;
-	for(int y = -2; y < (int)(ScreenWidth / Size); y++)
+	const int NumItemsWidth = std::ceil(ScreenWidth / Size);
+	const int NumItemsHeight = std::ceil(ScreenHeight / Size);
+	for(int y = -2; y < NumItemsHeight; y++)
 	{
-		for(int x = -2; x < (int)(ScreenHeight / Size); x++)
+		for(int x = 0; x < NumItemsWidth + 4; x += 2)
 		{
-			aCheckerItems[NumCheckerItems] = IGraphics::CQuadItem((x - OffsetTime) * Size * 2 + (y & 1) * Size, (y + OffsetTime) * Size, Size, Size);
+			aCheckerItems[NumCheckerItems] = IGraphics::CQuadItem((x - 2 * OffsetTime + (y & 1)) * Size, (y + OffsetTime) * Size, Size, Size);
 			NumCheckerItems++;
 			if(NumCheckerItems == std::size(aCheckerItems))
 			{
@@ -2323,7 +2405,7 @@ int CMenus::MenuImageScan(const char *pName, int IsDir, int DirType, void *pUser
 	str_format(aPath, sizeof(aPath), "menuimages/%s", pName);
 
 	CImageInfo Info;
-	if(!pSelf->Graphics()->LoadPNG(&Info, aPath, DirType))
+	if(!pSelf->Graphics()->LoadPng(Info, aPath, DirType))
 	{
 		char aError[IO_MAX_PATH_LENGTH + 64];
 		str_format(aError, sizeof(aError), "Failed to load menu image from '%s'", aPath);
@@ -2341,16 +2423,7 @@ int CMenus::MenuImageScan(const char *pName, int IsDir, int DirType, void *pUser
 
 	MenuImage.m_OrgTexture = pSelf->Graphics()->LoadTextureRaw(Info, 0, aPath);
 
-	// create gray scale version
-	unsigned char *pData = static_cast<unsigned char *>(Info.m_pData);
-	const size_t Step = Info.PixelSize();
-	for(int i = 0; i < Info.m_Width * Info.m_Height; i++)
-	{
-		int v = (pData[i * Step] + pData[i * Step + 1] + pData[i * Step + 2]) / 3;
-		pData[i * Step] = v;
-		pData[i * Step + 1] = v;
-		pData[i * Step + 2] = v;
-	}
+	ConvertToGrayscale(Info);
 	MenuImage.m_GreyTexture = pSelf->Graphics()->LoadTextureRawMove(Info, 0, aPath);
 
 	str_truncate(MenuImage.m_aName, sizeof(MenuImage.m_aName), pName, str_length(pName) - str_length(pExtension));
@@ -2376,9 +2449,15 @@ void CMenus::SetMenuPage(int NewPage)
 	if(NewPage >= PAGE_INTERNET && NewPage <= PAGE_FAVORITE_COMMUNITY_5)
 	{
 		g_Config.m_UiPage = NewPage;
-		if(!m_ShowStart && OldPage != NewPage)
+		bool ForceRefresh = false;
+		if(m_ForceRefreshLanPage)
 		{
-			RefreshBrowserTab(false);
+			ForceRefresh = NewPage == PAGE_LAN;
+			m_ForceRefreshLanPage = false;
+		}
+		if(OldPage != NewPage || ForceRefresh)
+		{
+			RefreshBrowserTab(ForceRefresh);
 		}
 	}
 }

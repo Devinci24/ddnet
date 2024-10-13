@@ -11,6 +11,7 @@
 #include <game/client/ui_listbox.h>
 #include <game/mapitems.h>
 
+#include <game/editor/enums.h>
 #include <game/editor/mapitems/envelope.h>
 #include <game/editor/mapitems/layer.h>
 #include <game/editor/mapitems/layer_front.h>
@@ -31,7 +32,6 @@
 #include <engine/shared/datafile.h>
 #include <engine/shared/jobs.h>
 
-#include "auto_map.h"
 #include "editor_history.h"
 #include "editor_server_settings.h"
 #include "editor_trackers.h"
@@ -39,6 +39,8 @@
 #include "layer_selector.h"
 #include "map_view.h"
 #include "smooth_value.h"
+#include <game/editor/prompt.h>
+#include <game/editor/quick_action.h>
 
 #include <deque>
 #include <functional>
@@ -61,7 +63,8 @@ enum
 
 	DIALOG_NONE = 0,
 	DIALOG_FILE,
-	DIALOG_MAPSETTINGS_ERROR
+	DIALOG_MAPSETTINGS_ERROR,
+	DIALOG_QUICK_PROMPT,
 };
 
 class CEditorImage;
@@ -197,7 +200,8 @@ public:
 	void CreateDefault(IGraphics::CTextureHandle EntitiesTexture);
 
 	// io
-	bool Save(const char *pFilename);
+	bool Save(const char *pFilename, const std::function<void(const char *pErrorMessage)> &ErrorHandler);
+	bool PerformPreSaveSanityChecks(const std::function<void(const char *pErrorMessage)> &ErrorHandler);
 	bool Load(const char *pFilename, int StorageType, const std::function<void(const char *pErrorMessage)> &ErrorHandler);
 	void PerformSanityChecks(const std::function<void(const char *pErrorMessage)> &ErrorHandler);
 
@@ -215,8 +219,15 @@ public:
 	void MakeTuneLayer(const std::shared_ptr<CLayer> &pLayer);
 };
 
-struct CProperty
+class CProperty
 {
+public:
+	CProperty(const char *pName, int Value, int Type, int Min, int Max) :
+		m_pName(pName), m_Value(Value), m_Type(Type), m_Min(Min), m_Max(Max) {}
+
+	CProperty(std::nullptr_t) :
+		m_pName(nullptr), m_Value(0), m_Type(0), m_Min(0), m_Max(0) {}
+
 	const char *m_pName;
 	int m_Value;
 	int m_Type;
@@ -279,6 +290,7 @@ class CEditor : public IEditor
 	std::vector<std::reference_wrapper<CEditorComponent>> m_vComponents;
 	CMapView m_MapView;
 	CLayerSelector m_LayerSelector;
+	CPrompt m_Prompt;
 
 	bool m_EditorWasUsedBefore = false;
 
@@ -320,7 +332,33 @@ public:
 	const CMapView *MapView() const { return &m_MapView; }
 	CLayerSelector *LayerSelector() { return &m_LayerSelector; }
 
+	void SelectNextLayer();
+	void SelectPreviousLayer();
+
+	void FillGameTiles(EGameTileOp FillTile) const;
+	bool CanFillGameTiles() const;
+	void AddQuadOrSound();
+	void AddGroup();
+	void AddSoundLayer();
+	void AddTileLayer();
+	void AddQuadsLayer();
+	void AddSwitchLayer();
+	void AddFrontLayer();
+	void AddTuneLayer();
+	void AddSpeedupLayer();
+	void AddTeleLayer();
+	void DeleteSelectedLayer();
+	void LayerSelectImage();
+	bool IsNonGameTileLayerSelected() const;
+	void MapDetails();
+#define REGISTER_QUICK_ACTION(name, text, callback, disabled, active, button_color, description) CQuickAction m_QuickAction##name;
+#include <game/editor/quick_actions.h>
+#undef REGISTER_QUICK_ACTION
+
 	CEditor() :
+#define REGISTER_QUICK_ACTION(name, text, callback, disabled, active, button_color, description) m_QuickAction##name(text, description, callback, disabled, active, button_color),
+#include <game/editor/quick_actions.h>
+#undef REGISTER_QUICK_ACTION
 		m_ZoomEnvelopeX(1.0f, 0.1f, 600.0f),
 		m_ZoomEnvelopeY(640.0f, 0.1f, 32000.0f),
 		m_MapSettingsCommandContext(m_MapSettingsBackend.NewContext(&m_SettingsCommandInput))
@@ -370,10 +408,6 @@ public:
 		m_OffsetEnvelopeY = 0.5f;
 
 		m_ShowMousePointer = true;
-		m_MouseDeltaX = 0;
-		m_MouseDeltaY = 0;
-		m_MouseDeltaWx = 0;
-		m_MouseDeltaWy = 0;
 
 		m_GuiActive = true;
 		m_PreviewZoom = false;
@@ -406,8 +440,8 @@ public:
 
 		m_CheckerTexture.Invalidate();
 		m_BackgroundTexture.Invalidate();
-		for(int i = 0; i < NUM_CURSORS; i++)
-			m_aCursorTextures[i].Invalidate();
+		for(auto &CursorTexture : m_aCursorTextures)
+			CursorTexture.Invalidate();
 
 		m_CursorType = CURSOR_NORMAL;
 
@@ -415,8 +449,16 @@ public:
 
 		// DDRace
 
-		m_TeleNumber = 1;
-		m_TeleCheckpointNumber = 1;
+		m_ViewTeleNumber = 1;
+		m_TeleNumbers = {
+			{TILE_TELEINEVIL, 1},
+			{TILE_TELEINWEAPON, 1},
+			{TILE_TELEINHOOK, 1},
+			{TILE_TELEIN, 1},
+			{TILE_TELEOUT, 1},
+			{TILE_TELECHECK, 1},
+			{TILE_TELECHECKOUT, 1}};
+
 		m_SwitchNum = 1;
 		m_TuningNum = 1;
 		m_SwitchDelay = 0;
@@ -464,8 +506,7 @@ public:
 	void ResetIngameMoved() override { m_IngameMoved = false; }
 
 	void HandleCursorMovement();
-	void OnMouseMove(float MouseX, float MouseY);
-	void DispatchInputEvents();
+	void OnMouseMove(vec2 MousePos);
 	void HandleAutosave();
 	bool PerformAutosave();
 	void HandleWriterFinishJobs();
@@ -616,7 +657,8 @@ public:
 	IGraphics::CTextureHandle m_FilePreviewImage;
 	int m_FilePreviewSound;
 	EPreviewState m_FilePreviewState;
-	CImageInfo m_FilePreviewImageInfo;
+	int m_FilePreviewImageWidth;
+	int m_FilePreviewImageHeight;
 	bool m_FileDialogOpening;
 
 	int m_ToolbarPreviewSound;
@@ -706,17 +748,10 @@ public:
 
 	char m_aMenuBackgroundTooltip[256];
 	bool m_PreviewZoom;
-	float m_MouseWScale = 1.0f; // Mouse (i.e. UI) scale relative to the World (selected Group)
-	float m_MouseX = 0.0f;
-	float m_MouseY = 0.0f;
-	float m_MouseWorldX = 0.0f;
-	float m_MouseWorldY = 0.0f;
-	float m_MouseWorldNoParaX = 0.0f;
-	float m_MouseWorldNoParaY = 0.0f;
-	float m_MouseDeltaX;
-	float m_MouseDeltaY;
-	float m_MouseDeltaWx;
-	float m_MouseDeltaWy;
+	float m_MouseWorldScale = 1.0f; // Mouse (i.e. UI) scale relative to the World (selected Group)
+	vec2 m_MouseWorldPos = vec2(0.0f, 0.0f);
+	vec2 m_MouseWorldNoParaPos = vec2(0.0f, 0.0f);
+	vec2 m_MouseDeltaWorld = vec2(0.0f, 0.0f);
 	const void *m_pContainerPanned;
 	const void *m_pContainerPannedLast;
 	char m_MapEditorId; // UI element ID for the main map editor
@@ -839,13 +874,13 @@ public:
 	void DoMapSettingsEditBox(CMapSettingsBackend::CContext *pContext, const CUIRect *pRect, float FontSize, float DropdownMaxHeight, int Corners = IGraphics::CORNER_ALL, const char *pToolTip = nullptr);
 
 	template<typename T>
-	int DoEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CLineInput *pLineInput, const CUIRect *pEditBoxRect, int x, float MaxHeight, bool AutoWidth, const std::vector<T> &vData, const FDropdownRenderCallback<T> &fnMatchCallback);
+	int DoEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CLineInput *pLineInput, const CUIRect *pEditBoxRect, int x, float MaxHeight, bool AutoWidth, const std::vector<T> &vData, const FDropdownRenderCallback<T> &pfnMatchCallback);
 	template<typename T>
-	int RenderEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CUIRect View, CLineInput *pLineInput, int x, float MaxHeight, bool AutoWidth, const std::vector<T> &vData, const FDropdownRenderCallback<T> &fnMatchCallback);
+	int RenderEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CUIRect View, CLineInput *pLineInput, int x, float MaxHeight, bool AutoWidth, const std::vector<T> &vData, const FDropdownRenderCallback<T> &pfnMatchCallback);
 
 	void RenderBackground(CUIRect View, IGraphics::CTextureHandle Texture, float Size, float Brightness) const;
 
-	SEditResult<int> UiDoValueSelector(void *pId, CUIRect *pRect, const char *pLabel, int Current, int Min, int Max, int Step, float Scale, const char *pToolTip, bool IsDegree = false, bool IsHex = false, int corners = IGraphics::CORNER_ALL, const ColorRGBA *pColor = nullptr, bool ShowValue = true);
+	SEditResult<int> UiDoValueSelector(void *pId, CUIRect *pRect, const char *pLabel, int Current, int Min, int Max, int Step, float Scale, const char *pToolTip, bool IsDegree = false, bool IsHex = false, int Corners = IGraphics::CORNER_ALL, const ColorRGBA *pColor = nullptr, bool ShowValue = true);
 
 	static CUi::EPopupMenuFunctionResult PopupMenuFile(void *pContext, CUIRect View, bool Active);
 	static CUi::EPopupMenuFunctionResult PopupMenuTools(void *pContext, CUIRect View, bool Active);
@@ -890,6 +925,7 @@ public:
 	static bool CallbackAddTileart(const char *pFilepath, int StorageType, void *pUser);
 	static bool CallbackSaveImage(const char *pFileName, int StorageType, void *pUser);
 	static bool CallbackSaveSound(const char *pFileName, int StorageType, void *pUser);
+	static bool CallbackCustomEntities(const char *pFileName, int StorageType, void *pUser);
 
 	void PopupSelectImageInvoke(int Current, float x, float y);
 	int PopupSelectImageResult();
@@ -1015,7 +1051,7 @@ public:
 	void SelectGameLayer();
 	std::vector<int> SortImages();
 
-	void DoAudioPreview(CUIRect View, const void *pPlayPauseButtonId, const void *pStopButtonId, const void *pSeekBarId, const int SampleId);
+	void DoAudioPreview(CUIRect View, const void *pPlayPauseButtonId, const void *pStopButtonId, const void *pSeekBarId, int SampleId);
 
 	// Tile Numbers For Explanations - TODO: Add/Improve tiles and explanations
 	enum
@@ -1110,8 +1146,8 @@ public:
 	float EnvelopeToScreenX(const CUIRect &View, float x) const;
 	float ScreenToEnvelopeY(const CUIRect &View, float y) const;
 	float EnvelopeToScreenY(const CUIRect &View, float y) const;
-	float ScreenToEnvelopeDX(const CUIRect &View, float dx);
-	float ScreenToEnvelopeDY(const CUIRect &View, float dy);
+	float ScreenToEnvelopeDX(const CUIRect &View, float DeltaX);
+	float ScreenToEnvelopeDY(const CUIRect &View, float DeltaY);
 
 	// DDRace
 
@@ -1121,9 +1157,8 @@ public:
 	IGraphics::CTextureHandle GetSwitchTexture();
 	IGraphics::CTextureHandle GetTuneTexture();
 
-	unsigned char m_TeleNumber;
-	unsigned char m_TeleCheckpointNumber;
 	unsigned char m_ViewTeleNumber;
+	std::map<int, unsigned char> m_TeleNumbers;
 
 	unsigned char m_TuningNum;
 
@@ -1137,9 +1172,8 @@ public:
 
 	void AdjustBrushSpecialTiles(bool UseNextFree, int Adjust = 0);
 	int FindNextFreeSwitchNumber();
-	int FindNextFreeTeleNumber(bool IsCheckpoint = false);
+	int FindNextFreeTeleNumber(int Index);
 
-public:
 	// Undo/Redo
 	CEditorHistory m_EditorHistory;
 	CEditorHistory m_ServerSettingsHistory;
@@ -1151,7 +1185,6 @@ private:
 	void UndoLastAction();
 	void RedoLastAction();
 
-private:
 	std::map<int, CPoint[5]> m_QuadDragOriginalPoints;
 };
 

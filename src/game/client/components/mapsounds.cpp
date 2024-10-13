@@ -17,11 +17,30 @@ CMapSounds::CMapSounds()
 	m_Count = 0;
 }
 
+void CMapSounds::Play(int Channel, int SoundId)
+{
+	if(SoundId < 0 || SoundId >= m_Count)
+		return;
+
+	m_pClient->m_Sounds.PlaySample(Channel, m_aSounds[SoundId], 0, 1.0f);
+}
+
+void CMapSounds::PlayAt(int Channel, int SoundId, vec2 Position)
+{
+	if(SoundId < 0 || SoundId >= m_Count)
+		return;
+
+	m_pClient->m_Sounds.PlaySampleAt(Channel, m_aSounds[SoundId], 0, 1.0f, Position);
+}
+
 void CMapSounds::OnMapLoad()
 {
 	IMap *pMap = Kernel()->RequestInterface<IMap>();
 
 	Clear();
+
+	if(!Sound()->IsSoundEnabled())
+		return;
 
 	// load samples
 	int Start;
@@ -64,7 +83,6 @@ void CMapSounds::OnMapLoad()
 	}
 
 	// enqueue sound sources
-	m_vSourceQueue.clear();
 	for(int g = 0; g < Layers()->NumGroups(); g++)
 	{
 		CMapItemGroup *pGroup = Layers()->GetGroup(g);
@@ -145,7 +163,7 @@ void CMapSounds::OnRender()
 				if(!Source.m_pSource->m_Pan)
 					Flags |= ISound::FLAG_NO_PANNING;
 
-				Source.m_Voice = m_pClient->m_Sounds.PlaySampleAt(CSounds::CHN_MAPSOUND, m_aSounds[Source.m_Sound], 1.0f, vec2(fx2f(Source.m_pSource->m_Position.x), fx2f(Source.m_pSource->m_Position.y)), Flags);
+				Source.m_Voice = m_pClient->m_Sounds.PlaySampleAt(CSounds::CHN_MAPSOUND, m_aSounds[Source.m_Sound], Flags, 1.0f, vec2(fx2f(Source.m_pSource->m_Position.x), fx2f(Source.m_pSource->m_Position.y)));
 				Sound()->SetVoiceTimeOffset(Source.m_Voice, Offset);
 				Sound()->SetVoiceFalloff(Source.m_Voice, Source.m_pSource->m_Falloff / 255.0f);
 				switch(Source.m_pSource->m_Shape.m_Type)
@@ -221,7 +239,7 @@ void CMapSounds::OnRender()
 						x -= pGroup->m_OffsetX;
 						y -= pGroup->m_OffsetY;
 
-						Sound()->SetVoiceLocation(Voice.m_Voice, x, y);
+						Sound()->SetVoicePosition(Voice.m_Voice, vec2(x, y));
 
 						ColorRGBA Volume = ColorRGBA(1.0f, 0.0f, 0.0f, 0.0f);
 						CMapLayers::EnvelopeEval(Voice.m_pSource->m_SoundEnvOffset, Voice.m_pSource->m_SoundEnv, Volume, 1, &m_pClient->m_MapLayersBackground);
@@ -239,6 +257,7 @@ void CMapSounds::OnRender()
 void CMapSounds::Clear()
 {
 	// unload all samples
+	m_vSourceQueue.clear();
 	for(int i = 0; i < m_Count; i++)
 	{
 		Sound()->UnloadSample(m_aSounds[i]);

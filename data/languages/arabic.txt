@@ -71,8 +71,8 @@ Client
 Connecting to
 == ﻰﻟﺍ ﻝﺎﺼﺗﺍ
 
-Connection Problems...
-== ﻝﺎﺼﺗﻻﺍ ﻲﻓ ﻞﻛﺎﺸﻣ...
+Connection Problems…
+== ﻝﺎﺼﺗﻻﺍ ﻲﻓ ﻞﻛﺎﺸﻣ…
 
 Console
 == ﻞﺴﻧﻮﻜﻟﺍ
@@ -274,9 +274,6 @@ Player
 
 Player country:
 == ﺐﻋﻼﻟﺍ ﺪﻠﺑ:
-
-Player options
-== ﺐﻋﻼﻟﺍ ﺕﺍﺩﺍﺪﻋﺍ
 
 Players
 == ﻦﻴﺒﻋﻻ
@@ -494,9 +491,6 @@ Your skin
 Reset to defaults
 == ﺀﻲﺷ ﻞﻛ ﺓﺩﺎﻋﺍ
 
-Round
-== ﺔﻟﻮﺟ
-
 Lht.
 == ﺢﻴﺘﻔﺗ
 
@@ -608,8 +602,8 @@ Show other players' key presses
 System message
 == ﻡﺎﻈﻨﻟﺍ ﻞﺋﺎﺳﺭ
 
-Updating...
-== ...ﺚﻳﺪﺤﺘﻟﺍ ﺭﺎﺟ
+Updating…
+== …ﺚﻳﺪﺤﺘﻟﺍ ﺭﺎﺟ
 
 Overlay entities
 == ﻥﺍﺭﺪﺠﻟﺍ-ﺐﻛﺍﺮﺗ
@@ -619,9 +613,6 @@ Messages
 
 %.2f MiB
 == %.2f MiB
-
-Use DDRace Scoreboard
-== ﻝﺎﻤﻌﺘﺳﺃ DDRace ﺩﺭﻮﺑ ﺭﻮﻜﺳ
 
 Loading DDNet Client
 == ﻞﻴﻤﺤﺘﻟﺍ ﺭﺎﺟ DDNet Client
@@ -779,9 +770,6 @@ Skin prefix
 Show HUD
 == ﻞﻜﺸﻟﺍ ﺭﺎﻬﻇﺍ
 
-Reload
-== ﻞﻴﻤﺤﺘﻟﺍ ﺓﺩﺎﻋﺍ
-
 9+ new mentions
 == 9+ ﺓﺪﻳﺪﺟ ﺕﺍﺭﺎﻌﺷﺍ
 
@@ -845,8 +833,8 @@ Zoom in
 Disconnect Dummy
 == ﺔﻴﻣﺪﻟﺍ ﺝﺍﺮﺧﺍ
 
-Update failed! Check log...
-== ...ﺕﺎﻗﻮﻠﻟﺍ ﻦﻣ ﺪﻛﺎﺗ !ﻞﺸﻓ ﺚﻳﺪﺤﺘﻟﺍ
+Update failed! Check log…
+== …ﺕﺎﻗﻮﻠﻟﺍ ﻦﻣ ﺪﻛﺎﺗ !ﻞﺸﻓ ﺚﻳﺪﺤﺘﻟﺍ
 
 Markers
 == ﺕﺎﻣﻼﻌﻟﺍ
@@ -1032,9 +1020,6 @@ Debug mode enabled. Press Ctrl+Shift+D to disable debug mode.
 Existing Player
 == ﺩﻮﺟﻮﻣ ﺐﻋﻼﻟﺍ
 
-Your nickname '%s' is already used (%d points). Do you still want to use it?
-== ﻪﻣﺍﺪﺨﺘﺳﺍ ﺪﻳﺮﺗ ﺖﻟﺯﺎﻣ ﻞﻫ '%s' ﻞﻤﻌﺘﺴﻣ ﻚﻤﺳﺍ
-
 Checking for existing player with your name
 == ﻚﻤﺳﺎﺑ ﺐﻋﻻ ﺩﻮﺟﻭ ﻦﻣ ﻖﻘﺤﺘﻟﺍ
 
@@ -1098,7 +1083,16 @@ Could not initialize the given graphics backend, reverting to the default backen
 Could not initialize the given graphics backend, this is probably because you didn't install the driver of the integrated graphics card.
 == 
 
+Could not resolve connect address '%s'. See local console for details.
+== 
+
+Connect address error
+== 
+
 Could not save downloaded map. Try manually deleting this file: %s
+== 
+
+Could not connect dummy
 == 
 
 Error playing demo
@@ -1128,10 +1122,13 @@ Connected
 Loading map file from storage
 == 
 
-Why are you slowmo replaying to read this?
+Loading demo file from storage
 == 
 
 Initializing components
+== 
+
+Why are you slowmo replaying to read this?
 == 
 
 Initializing assets
@@ -1194,6 +1191,10 @@ Angle:
 Multi-View
 == 
 
+[Spectating]
+Following %s
+== 
+
 Team %d
 == 
 
@@ -1215,24 +1216,6 @@ Press a key…
 Main menu
 == 
 
-Trying to determine UDP connectivity...
-== 
-
-UDP seems to be filtered.
-== 
-
-UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or network accelerators.
-== 
-
-No answer from server yet.
-== 
-
-Getting game info
-== 
-
-Requesting to join the game
-== 
-
 Rename folder
 == 
 
@@ -1240,6 +1223,15 @@ Render complete
 == 
 
 Are you sure that you want to restart?
+== 
+
+Your nickname '%s' is already used (%d points). Do you still want to use it?
+== 
+
+Save skin
+== 
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == 
 
 There's an unsaved map in the editor, you might want to save it.
@@ -1275,6 +1267,33 @@ Join Tutorial Server
 Skip Tutorial
 == 
 
+Unable to save the skin
+== 
+
+Unable to save the skin with a reserved name
+== 
+
+Trying to determine UDP connectivity…
+== 
+
+UDP seems to be filtered.
+== 
+
+UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or network accelerators.
+== 
+
+No answer from server yet.
+== 
+
+%d/%d KiB (%.1f KiB/s)
+== 
+
+Getting game info
+== 
+
+Requesting to join the game
+== 
+
 Loading menu images
 == 
 
@@ -1302,7 +1321,16 @@ CHN
 Getting server list from master server
 == 
 
+No local servers found (ports %d-%d)
+== 
+
+Example of usage
+== 
+
 Are you sure that you want to disconnect and switch to a different server?
+== 
+
+No login required
 == 
 
 Communities
@@ -1468,6 +1496,12 @@ Unable to delete the demo '%s'
 Unable to delete the folder '%s'. Make sure it's empty first.
 == 
 
+Dummy is not allowed on this server
+== 
+
+Please wait…
+== 
+
 Loading…
 == 
 
@@ -1484,6 +1518,10 @@ Deactivate all
 == 
 
 Menu opened. Press Esc key again to close menu.
+== 
+
+[Hertz]
+Hz
 == 
 
 Save power by lowering refresh rate (higher input latency)
@@ -1505,6 +1543,9 @@ Open the directory to add custom themes
 == 
 
 Dummy
+== 
+
+Player info change cooldown
 == 
 
 Download community skins
@@ -1608,6 +1649,9 @@ Graphics card
 auto
 == 
 
+Tee
+== 
+
 Appearance
 == 
 
@@ -1629,7 +1673,7 @@ Show local time always
 DDRace HUD
 == 
 
-Show client IDs in scoreboard
+Show client IDs (scoreboard, chat, spectator)
 == 
 
 Show DDRace HUD
@@ -1656,6 +1700,12 @@ Show freeze bars
 Opacity of freeze bars inside freeze
 == 
 
+Always show chat
+== 
+
+Show only chat messages from team members
+== 
+
 Chat font size
 == 
 
@@ -1665,7 +1715,13 @@ Chat width
 Preview
 == 
 
-Show hook strength indicator
+Show friend mark (♥) in name plates
+== 
+
+Show hook strength icon indicator
+== 
+
+Show hook strength number indicator
 == 
 
 Show local player's key presses
@@ -1678,6 +1734,15 @@ Same clan color in scoreboard
 == 
 
 Hook collision line
+== 
+
+Show own player's hook collision line
+== 
+
+Always show own player's hook collision line
+== 
+
+Always show other players' hook collision lines
 == 
 
 Hook collision line width
@@ -1782,6 +1847,21 @@ Unregister protocol and file extensions
 DDNet %s is available:
 == 
 
+Basic
+== 
+
+Custom
+== 
+
+Are you sure that you want to delete '%s'?
+== 
+
+Delete skin
+== 
+
+Unable to delete skin
+== 
+
 Extras
 == 
 
@@ -1806,11 +1886,52 @@ Can't find a Tutorial server
 Loading race demo files
 == 
 
+Round %d/%d
+== 
+
+[Spectators]
+%d others…
+== 
+
 Super
+== 
+
+[Team and size]
+%d\n(%d/%d)
+== 
+
+Team %d (%d/%d)
+== 
+
+[skins]
+Body
+== 
+
+[skins]
+Marking
+== 
+
+[skins]
+Decoration
+== 
+
+[skins]
+Hands
+== 
+
+[skins]
+Feet
+== 
+
+[skins]
+Eyes
 == 
 
 Loading sound files
 == 
 
 Moved ingame
+== 
+
+https://wiki.ddnet.org/wiki/Mapping
 == 

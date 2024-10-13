@@ -4,8 +4,9 @@
 #include <engine/storage.h>
 #include <game/mapitems.h>
 
-struct EnvelopedQuad
+class CEnvelopedQuad
 {
+public:
 	int m_GroupId;
 	int m_LayerId;
 	int m_TilePosX;
@@ -48,9 +49,9 @@ int FxToTilePos(const int FxPos)
 	return std::floor(fx2f(FxPos) / 32);
 }
 
-bool GetEnvelopedQuads(const CQuad *pQuads, const int NumQuads, const int EnvId, const int GroupId, const int LayerId, int &QuadsCounter, EnvelopedQuad pEnvQuads[1024])
+bool GetEnvelopedQuads(const CQuad *pQuads, const int NumQuads, const int EnvId, const int GroupId, const int LayerId, int &QuadsCounter, CEnvelopedQuad pEnvQuads[1024])
 {
-	bool bFound = false;
+	bool Found = false;
 	for(int i = 0; i < NumQuads; i++)
 	{
 		if(pQuads[i].m_PosEnv != EnvId && pQuads[i].m_ColorEnv != EnvId)
@@ -62,13 +63,13 @@ bool GetEnvelopedQuads(const CQuad *pQuads, const int NumQuads, const int EnvId,
 		pEnvQuads[QuadsCounter].m_TilePosY = FxToTilePos(pQuads[i].m_aPoints[4].y);
 
 		QuadsCounter++;
-		bFound = true;
+		Found = true;
 	}
 
-	return bFound;
+	return Found;
 }
 
-void PrintEnvelopedQuads(const EnvelopedQuad pEnvQuads[1024], const int EnvId, const int QuadsCounter)
+void PrintEnvelopedQuads(const CEnvelopedQuad pEnvQuads[1024], const int EnvId, const int QuadsCounter)
 {
 	if(!QuadsCounter)
 	{
@@ -89,7 +90,7 @@ bool FindEnv(const char aFilename[64], const int EnvId)
 
 	int LayersStart, LayersCount, QuadsCounter = 0;
 	InputMap.GetType(MAPITEMTYPE_LAYER, &LayersStart, &LayersCount);
-	EnvelopedQuad pEnvQuads[1024];
+	CEnvelopedQuad pEnvQuads[1024];
 
 	for(int i = 0; i < LayersCount; i++)
 	{

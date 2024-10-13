@@ -84,58 +84,6 @@
 #include <sys/filio.h>
 #endif
 
-IOHANDLE io_stdin()
-{
-	return stdin;
-}
-
-IOHANDLE io_stdout()
-{
-	return stdout;
-}
-
-IOHANDLE io_stderr()
-{
-	return stderr;
-}
-
-IOHANDLE io_current_exe()
-{
-	// From https://stackoverflow.com/a/1024937.
-#if defined(CONF_FAMILY_WINDOWS)
-	wchar_t wide_path[IO_MAX_PATH_LENGTH];
-	if(GetModuleFileNameW(NULL, wide_path, std::size(wide_path)) == 0 || GetLastError() != ERROR_SUCCESS)
-	{
-		return 0;
-	}
-	const std::optional<std::string> path = windows_wide_to_utf8(wide_path);
-	return path.has_value() ? io_open(path.value().c_str(), IOFLAG_READ) : 0;
-#elif defined(CONF_PLATFORM_MACOS)
-	char path[IO_MAX_PATH_LENGTH];
-	uint32_t path_size = sizeof(path);
-	if(_NSGetExecutablePath(path, &path_size))
-	{
-		return 0;
-	}
-	return io_open(path, IOFLAG_READ);
-#else
-	static const char *NAMES[] = {
-		"/proc/self/exe", // Linux, Android
-		"/proc/curproc/exe", // NetBSD
-		"/proc/curproc/file", // DragonFly
-	};
-	for(auto &name : NAMES)
-	{
-		IOHANDLE result = io_open(name, IOFLAG_READ);
-		if(result)
-		{
-			return result;
-		}
-	}
-	return 0;
-#endif
-}
-
 static NETSTATS network_stats = {0};
 
 #define VLEN 128
@@ -251,9 +199,9 @@ bool mem_has_null(const void *block, size_t size)
 	return false;
 }
 
-IOHANDLE io_open_impl(const char *filename, int flags)
+IOHANDLE io_open(const char *filename, int flags)
 {
-	dbg_assert(flags == (IOFLAG_READ | IOFLAG_SKIP_BOM) || flags == IOFLAG_READ || flags == IOFLAG_WRITE || flags == IOFLAG_APPEND, "flags must be read, read+skipbom, write or append");
+	dbg_assert(flags == IOFLAG_READ || flags == IOFLAG_WRITE || flags == IOFLAG_APPEND, "flags must be read, write or append");
 #if defined(CONF_FAMILY_WINDOWS)
 	const std::wstring wide_filename = windows_utf8_to_wide(filename);
 	DWORD desired_access;
@@ -311,21 +259,6 @@ IOHANDLE io_open_impl(const char *filename, int flags)
 	}
 	return fopen(filename, open_mode);
 #endif
-}
-
-IOHANDLE io_open(const char *filename, int flags)
-{
-	IOHANDLE result = io_open_impl(filename, flags);
-	unsigned char buf[3];
-	if((flags & IOFLAG_SKIP_BOM) == 0 || !result)
-	{
-		return result;
-	}
-	if(io_read(result, buf, sizeof(buf)) != 3 || buf[0] != 0xef || buf[1] != 0xbb || buf[2] != 0xbf)
-	{
-		io_seek(result, 0, IOSEEK_START);
-	}
-	return result;
 }
 
 unsigned io_read(IOHANDLE io, void *buffer, unsigned size)
@@ -418,11 +351,6 @@ long int io_length(IOHANDLE io)
 	return length;
 }
 
-int io_error(IOHANDLE io)
-{
-	return ferror((FILE *)io);
-}
-
 unsigned io_write(IOHANDLE io, const void *buffer, unsigned size)
 {
 	return fwrite(buffer, 1, size, (FILE *)io);
@@ -457,6 +385,63 @@ int io_sync(IOHANDLE io)
 	return FlushFileBuffers((HANDLE)_get_osfhandle(_fileno((FILE *)io))) == FALSE;
 #else
 	return fsync(fileno((FILE *)io)) != 0;
+#endif
+}
+
+int io_error(IOHANDLE io)
+{
+	return ferror((FILE *)io);
+}
+
+IOHANDLE io_stdin()
+{
+	return stdin;
+}
+
+IOHANDLE io_stdout()
+{
+	return stdout;
+}
+
+IOHANDLE io_stderr()
+{
+	return stderr;
+}
+
+IOHANDLE io_current_exe()
+{
+	// From https://stackoverflow.com/a/1024937.
+#if defined(CONF_FAMILY_WINDOWS)
+	wchar_t wide_path[IO_MAX_PATH_LENGTH];
+	if(GetModuleFileNameW(NULL, wide_path, std::size(wide_path)) == 0 || GetLastError() != ERROR_SUCCESS)
+	{
+		return 0;
+	}
+	const std::optional<std::string> path = windows_wide_to_utf8(wide_path);
+	return path.has_value() ? io_open(path.value().c_str(), IOFLAG_READ) : 0;
+#elif defined(CONF_PLATFORM_MACOS)
+	char path[IO_MAX_PATH_LENGTH];
+	uint32_t path_size = sizeof(path);
+	if(_NSGetExecutablePath(path, &path_size))
+	{
+		return 0;
+	}
+	return io_open(path, IOFLAG_READ);
+#else
+	static const char *NAMES[] = {
+		"/proc/self/exe", // Linux, Android
+		"/proc/curproc/exe", // NetBSD
+		"/proc/curproc/file", // DragonFly
+	};
+	for(auto &name : NAMES)
+	{
+		IOHANDLE result = io_open(name, IOFLAG_READ);
+		if(result)
+		{
+			return result;
+		}
+	}
+	return 0;
 #endif
 }
 
@@ -734,17 +719,6 @@ int aio_error(ASYNCIO *aio)
 	return aio->error;
 }
 
-void aio_free(ASYNCIO *aio)
-{
-	aio->lock.lock();
-	if(aio->thread)
-	{
-		thread_detach(aio->thread);
-		aio->thread = 0;
-	}
-	aio_handle_free_and_unlock(aio);
-}
-
 void aio_close(ASYNCIO *aio)
 {
 	{
@@ -768,6 +742,17 @@ void aio_wait(ASYNCIO *aio)
 	}
 	sphore_signal(&aio->sphore);
 	thread_wait(thread);
+}
+
+void aio_free(ASYNCIO *aio)
+{
+	aio->lock.lock();
+	if(aio->thread)
+	{
+		thread_detach(aio->thread);
+		aio->thread = 0;
+	}
+	aio_handle_free_and_unlock(aio);
 }
 
 struct THREAD_RUN
@@ -882,10 +867,15 @@ void sphore_destroy(SEMAPHORE *sem)
 #elif defined(CONF_PLATFORM_MACOS)
 void sphore_init(SEMAPHORE *sem)
 {
-	char aBuf[32];
-	str_format(aBuf, sizeof(aBuf), "%p", (void *)sem);
+	char aBuf[64];
+	str_format(aBuf, sizeof(aBuf), "/%d.%p", pid(), (void *)sem);
 	*sem = sem_open(aBuf, O_CREAT | O_EXCL, S_IRWXU | S_IRWXG, 0);
-	dbg_assert(*sem != SEM_FAILED, "sem_open failure");
+	if(*sem == SEM_FAILED)
+	{
+		char aError[128];
+		str_format(aError, sizeof(aError), "sem_open failure, errno=%d, name='%s'", errno, aBuf);
+		dbg_assert(false, aError);
+	}
 }
 void sphore_wait(SEMAPHORE *sem)
 {
@@ -903,8 +893,8 @@ void sphore_signal(SEMAPHORE *sem)
 void sphore_destroy(SEMAPHORE *sem)
 {
 	dbg_assert(sem_close(*sem) == 0, "sem_close failure");
-	char aBuf[32];
-	str_format(aBuf, sizeof(aBuf), "%p", (void *)sem);
+	char aBuf[64];
+	str_format(aBuf, sizeof(aBuf), "/%d.%p", pid(), (void *)sem);
 	dbg_assert(sem_unlink(aBuf) == 0, "sem_unlink failure");
 }
 #elif defined(CONF_FAMILY_UNIX)
@@ -973,7 +963,7 @@ const NETADDR NETADDR_ZEROED = {NETTYPE_INVALID, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 static void netaddr_to_sockaddr_in(const NETADDR *src, struct sockaddr_in *dest)
 {
 	mem_zero(dest, sizeof(struct sockaddr_in));
-	if(src->type != NETTYPE_IPV4 && src->type != NETTYPE_WEBSOCKET_IPV4)
+	if(!(src->type & NETTYPE_IPV4) && !(src->type & NETTYPE_WEBSOCKET_IPV4))
 	{
 		dbg_msg("system", "couldn't convert NETADDR of type %d to ipv4", src->type);
 		return;
@@ -987,9 +977,9 @@ static void netaddr_to_sockaddr_in(const NETADDR *src, struct sockaddr_in *dest)
 static void netaddr_to_sockaddr_in6(const NETADDR *src, struct sockaddr_in6 *dest)
 {
 	mem_zero(dest, sizeof(struct sockaddr_in6));
-	if(src->type != NETTYPE_IPV6)
+	if(!(src->type & NETTYPE_IPV6))
 	{
-		dbg_msg("system", "couldn't not convert NETADDR of type %d to ipv6", src->type);
+		dbg_msg("system", "couldn't convert NETADDR of type %d to ipv6", src->type);
 		return;
 	}
 
@@ -1113,16 +1103,16 @@ void net_addr_str_v6(const unsigned short ip[8], int port, char *buffer, int buf
 	}
 }
 
-void net_addr_str(const NETADDR *addr, char *string, int max_length, int add_port)
+bool net_addr_str(const NETADDR *addr, char *string, int max_length, int add_port)
 {
-	if(addr->type == NETTYPE_IPV4 || addr->type == NETTYPE_WEBSOCKET_IPV4)
+	if(addr->type & NETTYPE_IPV4 || addr->type & NETTYPE_WEBSOCKET_IPV4)
 	{
 		if(add_port != 0)
 			str_format(string, max_length, "%d.%d.%d.%d:%d", addr->ip[0], addr->ip[1], addr->ip[2], addr->ip[3], addr->port);
 		else
 			str_format(string, max_length, "%d.%d.%d.%d", addr->ip[0], addr->ip[1], addr->ip[2], addr->ip[3]);
 	}
-	else if(addr->type == NETTYPE_IPV6)
+	else if(addr->type & NETTYPE_IPV6)
 	{
 		int port = -1;
 		unsigned short ip[8];
@@ -1138,7 +1128,11 @@ void net_addr_str(const NETADDR *addr, char *string, int max_length, int add_por
 		net_addr_str_v6(ip, port, string, max_length);
 	}
 	else
+	{
 		str_format(string, max_length, "unknown type %d", addr->type);
+		return false;
+	}
+	return true;
 }
 
 static int priv_net_extract(const char *hostname, char *host, int max_host, int *port)
@@ -1237,7 +1231,7 @@ static int parse_int(int *out, const char **str)
 {
 	int i = 0;
 	*out = 0;
-	if(**str < '0' || **str > '9')
+	if(!str_isnum(**str))
 		return -1;
 
 	i = **str - '0';
@@ -1245,7 +1239,7 @@ static int parse_int(int *out, const char **str)
 
 	while(true)
 	{
-		if(**str < '0' || **str > '9')
+		if(!str_isnum(**str))
 		{
 			*out = i;
 			return 0;
@@ -1290,11 +1284,16 @@ static int parse_uint16(unsigned short *out, const char **str)
 
 int net_addr_from_url(NETADDR *addr, const char *string, char *host_buf, size_t host_buf_size)
 {
+	bool sixup = false;
+	mem_zero(addr, sizeof(*addr));
 	const char *str = str_startswith(string, "tw-0.6+udp://");
+	if(!str && (str = str_startswith(string, "tw-0.7+udp://")))
+	{
+		addr->type |= NETTYPE_TW7;
+		sixup = true;
+	}
 	if(!str)
 		return 1;
-
-	mem_zero(addr, sizeof(*addr));
 
 	int length = str_length(str);
 	int start = 0;
@@ -1322,7 +1321,14 @@ int net_addr_from_url(NETADDR *addr, const char *string, char *host_buf, size_t 
 	if(host_buf)
 		str_copy(host_buf, host, host_buf_size);
 
-	return net_addr_from_str(addr, host);
+	int failure = net_addr_from_str(addr, host);
+	if(failure)
+		return failure;
+
+	if(sixup)
+		addr->type |= NETTYPE_TW7;
+
+	return failure;
 }
 
 int net_addr_from_str(NETADDR *addr, const char *string)
@@ -1531,24 +1537,21 @@ NETSOCKET net_udp_create(NETADDR bindaddr)
 {
 	NETSOCKET sock = (NETSOCKET_INTERNAL *)malloc(sizeof(*sock));
 	*sock = invalid_socket;
-	NETADDR tmpbindaddr = bindaddr;
-	int broadcast = 1;
-	int socket = -1;
 
 	if(bindaddr.type & NETTYPE_IPV4)
 	{
 		struct sockaddr_in addr;
-
-		/* bind, we should check for error */
+		NETADDR tmpbindaddr = bindaddr;
 		tmpbindaddr.type = NETTYPE_IPV4;
 		netaddr_to_sockaddr_in(&tmpbindaddr, &addr);
-		socket = priv_net_create_socket(AF_INET, SOCK_DGRAM, (struct sockaddr *)&addr, sizeof(addr));
+		int socket = priv_net_create_socket(AF_INET, SOCK_DGRAM, (struct sockaddr *)&addr, sizeof(addr));
 		if(socket >= 0)
 		{
 			sock->type |= NETTYPE_IPV4;
 			sock->ipv4sock = socket;
 
 			/* set broadcast */
+			int broadcast = 1;
 			if(setsockopt(socket, SOL_SOCKET, SO_BROADCAST, (const char *)&broadcast, sizeof(broadcast)) != 0)
 			{
 				dbg_msg("socket", "Setting BROADCAST on ipv4 failed: %d", net_errno());
@@ -1564,17 +1567,15 @@ NETSOCKET net_udp_create(NETADDR bindaddr)
 			}
 		}
 	}
+
 #if defined(CONF_WEBSOCKETS)
 	if(bindaddr.type & NETTYPE_WEBSOCKET_IPV4)
 	{
 		char addr_str[NETADDR_MAXSTRSIZE];
-
-		/* bind, we should check for error */
+		NETADDR tmpbindaddr = bindaddr;
 		tmpbindaddr.type = NETTYPE_WEBSOCKET_IPV4;
-
 		net_addr_str(&tmpbindaddr, addr_str, sizeof(addr_str), 0);
-		socket = websocket_create(addr_str, tmpbindaddr.port);
-
+		int socket = websocket_create(addr_str, tmpbindaddr.port);
 		if(socket >= 0)
 		{
 			sock->type |= NETTYPE_WEBSOCKET_IPV4;
@@ -1586,17 +1587,17 @@ NETSOCKET net_udp_create(NETADDR bindaddr)
 	if(bindaddr.type & NETTYPE_IPV6)
 	{
 		struct sockaddr_in6 addr;
-
-		/* bind, we should check for error */
+		NETADDR tmpbindaddr = bindaddr;
 		tmpbindaddr.type = NETTYPE_IPV6;
 		netaddr_to_sockaddr_in6(&tmpbindaddr, &addr);
-		socket = priv_net_create_socket(AF_INET6, SOCK_DGRAM, (struct sockaddr *)&addr, sizeof(addr));
+		int socket = priv_net_create_socket(AF_INET6, SOCK_DGRAM, (struct sockaddr *)&addr, sizeof(addr));
 		if(socket >= 0)
 		{
 			sock->type |= NETTYPE_IPV6;
 			sock->ipv6sock = socket;
 
 			/* set broadcast */
+			int broadcast = 1;
 			if(setsockopt(socket, SOL_SOCKET, SO_BROADCAST, (const char *)&broadcast, sizeof(broadcast)) != 0)
 			{
 				dbg_msg("socket", "Setting BROADCAST on ipv6 failed: %d", net_errno());
@@ -1616,20 +1617,17 @@ NETSOCKET net_udp_create(NETADDR bindaddr)
 		}
 	}
 
-	if(socket < 0)
+	if(sock->type == NETTYPE_INVALID)
 	{
 		free(sock);
 		sock = nullptr;
 	}
 	else
 	{
-		/* set non-blocking */
 		net_set_non_blocking(sock);
-
 		net_buffer_init(&sock->buffer);
 	}
 
-	/* return */
 	return sock;
 }
 
@@ -1845,46 +1843,41 @@ NETSOCKET net_tcp_create(NETADDR bindaddr)
 {
 	NETSOCKET sock = (NETSOCKET_INTERNAL *)malloc(sizeof(*sock));
 	*sock = invalid_socket;
-	NETADDR tmpbindaddr = bindaddr;
-	int socket = -1;
 
 	if(bindaddr.type & NETTYPE_IPV4)
 	{
 		struct sockaddr_in addr;
-
-		/* bind, we should check for error */
+		NETADDR tmpbindaddr = bindaddr;
 		tmpbindaddr.type = NETTYPE_IPV4;
 		netaddr_to_sockaddr_in(&tmpbindaddr, &addr);
-		socket = priv_net_create_socket(AF_INET, SOCK_STREAM, (struct sockaddr *)&addr, sizeof(addr));
-		if(socket >= 0)
+		int socket4 = priv_net_create_socket(AF_INET, SOCK_STREAM, (struct sockaddr *)&addr, sizeof(addr));
+		if(socket4 >= 0)
 		{
 			sock->type |= NETTYPE_IPV4;
-			sock->ipv4sock = socket;
+			sock->ipv4sock = socket4;
 		}
 	}
 
 	if(bindaddr.type & NETTYPE_IPV6)
 	{
 		struct sockaddr_in6 addr;
-
-		/* bind, we should check for error */
+		NETADDR tmpbindaddr = bindaddr;
 		tmpbindaddr.type = NETTYPE_IPV6;
 		netaddr_to_sockaddr_in6(&tmpbindaddr, &addr);
-		socket = priv_net_create_socket(AF_INET6, SOCK_STREAM, (struct sockaddr *)&addr, sizeof(addr));
-		if(socket >= 0)
+		int socket6 = priv_net_create_socket(AF_INET6, SOCK_STREAM, (struct sockaddr *)&addr, sizeof(addr));
+		if(socket6 >= 0)
 		{
 			sock->type |= NETTYPE_IPV6;
-			sock->ipv6sock = socket;
+			sock->ipv6sock = socket6;
 		}
 	}
 
-	if(socket < 0)
+	if(sock->type == NETTYPE_INVALID)
 	{
 		free(sock);
 		sock = nullptr;
 	}
 
-	/* return */
 	return sock;
 }
 
@@ -1986,6 +1979,8 @@ int net_tcp_connect(NETSOCKET sock, const NETADDR *a)
 	{
 		struct sockaddr_in addr;
 		netaddr_to_sockaddr_in(a, &addr);
+		if(sock->ipv4sock < 0)
+			return -2;
 		return connect(sock->ipv4sock, (struct sockaddr *)&addr, sizeof(addr));
 	}
 
@@ -1993,6 +1988,8 @@ int net_tcp_connect(NETSOCKET sock, const NETADDR *a)
 	{
 		struct sockaddr_in6 addr;
 		netaddr_to_sockaddr_in6(a, &addr);
+		if(sock->ipv6sock < 0)
+			return -2;
 		return connect(sock->ipv6sock, (struct sockaddr *)&addr, sizeof(addr));
 	}
 
@@ -2389,17 +2386,12 @@ int fs_is_relative_path(const char *path)
 
 int fs_chdir(const char *path)
 {
-	if(fs_is_dir(path))
-	{
 #if defined(CONF_FAMILY_WINDOWS)
-		const std::wstring wide_path = windows_utf8_to_wide(path);
-		return SetCurrentDirectoryW(wide_path.c_str()) != 0 ? 0 : 1;
+	const std::wstring wide_path = windows_utf8_to_wide(path);
+	return SetCurrentDirectoryW(wide_path.c_str()) != 0 ? 0 : 1;
 #else
-		return chdir(path) ? 1 : 0;
+	return chdir(path) ? 1 : 0;
 #endif
-	}
-	else
-		return 1;
 }
 
 char *fs_getcwd(char *buffer, int buffer_size)
@@ -2407,15 +2399,7 @@ char *fs_getcwd(char *buffer, int buffer_size)
 #if defined(CONF_FAMILY_WINDOWS)
 	const DWORD size_needed = GetCurrentDirectoryW(0, nullptr);
 	std::wstring wide_current_dir(size_needed, L'0');
-	DWORD result = GetCurrentDirectoryW(size_needed, wide_current_dir.data());
-	if(result == 0)
-	{
-		const DWORD LastError = GetLastError();
-		const std::string ErrorMsg = windows_format_system_message(LastError);
-		dbg_msg("filesystem", "GetCurrentDirectoryW failed: %ld %s", LastError, ErrorMsg.c_str());
-		buffer[0] = '\0';
-		return nullptr;
-	}
+	dbg_assert(GetCurrentDirectoryW(size_needed, wide_current_dir.data()) == size_needed - 1, "GetCurrentDirectoryW failure");
 	const std::optional<std::string> current_dir = windows_wide_to_utf8(wide_current_dir.c_str());
 	if(!current_dir.has_value())
 	{
@@ -2613,7 +2597,7 @@ int net_socket_read_wait(NETSOCKET sock, int time)
 	return 0;
 }
 
-int time_timestamp()
+int64_t time_timestamp()
 {
 	return time(0);
 }
@@ -2784,6 +2768,15 @@ int str_format_v(char *buffer, int buffer_size, const char *format, va_list args
 	return str_utf8_fix_truncation(buffer);
 }
 
+int str_format_int(char *buffer, size_t buffer_size, int value)
+{
+	buffer[0] = '\0'; // Fix false positive clang-analyzer-core.UndefinedBinaryOperatorResult when using result
+	auto result = std::to_chars(buffer, buffer + buffer_size - 1, value);
+	result.ptr[0] = '\0';
+	return result.ptr - buffer;
+}
+
+#undef str_format
 int str_format(char *buffer, int buffer_size, const char *format, ...)
 {
 	va_list args;
@@ -2792,6 +2785,9 @@ int str_format(char *buffer, int buffer_size, const char *format, ...)
 	va_end(args);
 	return length;
 }
+#if !defined(CONF_DEBUG)
+#define str_format str_format_opt
+#endif
 
 const char *str_trim_words(const char *str, int words)
 {
@@ -2950,7 +2946,7 @@ int str_comp_filenames(const char *a, const char *b)
 
 	for(; *a && *b; ++a, ++b)
 	{
-		if(*a >= '0' && *a <= '9' && *b >= '0' && *b <= '9')
+		if(str_isnum(*a) && str_isnum(*b))
 		{
 			result = 0;
 			do
@@ -2959,11 +2955,11 @@ int str_comp_filenames(const char *a, const char *b)
 					result = *a - *b;
 				++a;
 				++b;
-			} while(*a >= '0' && *a <= '9' && *b >= '0' && *b <= '9');
+			} while(str_isnum(*a) && str_isnum(*b));
 
-			if(*a >= '0' && *a <= '9')
+			if(str_isnum(*a))
 				return 1;
-			else if(*b >= '0' && *b <= '9')
+			else if(str_isnum(*b))
 				return -1;
 			else if(result || *a == '\0' || *b == '\0')
 				return result;
@@ -3164,6 +3160,38 @@ const char *str_find(const char *haystack, const char *needle)
 	}
 
 	return 0;
+}
+
+bool str_delimiters_around_offset(const char *haystack, const char *delim, int offset, int *start, int *end)
+{
+	bool found = true;
+	const char *search = haystack;
+	const int delim_len = str_length(delim);
+	*start = 0;
+	while(str_find(search, delim))
+	{
+		const char *test = str_find(search, delim) + delim_len;
+		int distance = test - haystack;
+		if(distance > offset)
+			break;
+
+		*start = distance;
+		search = test;
+	}
+	if(search == haystack)
+		found = false;
+
+	if(str_find(search, delim))
+	{
+		*end = str_find(search, delim) - haystack;
+	}
+	else
+	{
+		*end = str_length(haystack);
+		found = false;
+	}
+
+	return found;
 }
 
 const char *str_rchr(const char *haystack, char needle)
@@ -3563,11 +3591,16 @@ char str_uppercase(char c)
 	return c;
 }
 
+bool str_isnum(char c)
+{
+	return c >= '0' && c <= '9';
+}
+
 int str_isallnum(const char *str)
 {
 	while(*str)
 	{
-		if(!(*str >= '0' && *str <= '9'))
+		if(!str_isnum(*str))
 			return 0;
 		str++;
 	}
@@ -3578,7 +3611,7 @@ int str_isallnum_hex(const char *str)
 {
 	while(*str)
 	{
-		if(!(*str >= '0' && *str <= '9') && !(*str >= 'a' && *str <= 'f') && !(*str >= 'A' && *str <= 'F'))
+		if(!str_isnum(*str) && !(*str >= 'a' && *str <= 'f') && !(*str >= 'A' && *str <= 'F'))
 			return 0;
 		str++;
 	}
@@ -3632,13 +3665,6 @@ bool str_tofloat(const char *str, float *out)
 	if(out != nullptr)
 		*out = value;
 	return true;
-}
-
-void str_from_int(int value, char *buffer, size_t buffer_size)
-{
-	buffer[0] = '\0'; // Fix false positive clang-analyzer-core.UndefinedBinaryOperatorResult when using result
-	auto result = std::to_chars(buffer, buffer + buffer_size - 1, value);
-	result.ptr[0] = '\0';
 }
 
 int str_utf8_comp_nocase(const char *a, const char *b)
@@ -3934,6 +3960,24 @@ int str_utf8_check(const char *str)
 	return 1;
 }
 
+void str_utf8_copy_num(char *dst, const char *src, int dst_size, int num)
+{
+	int new_cursor;
+	int cursor = 0;
+
+	while(src[cursor] && num > 0)
+	{
+		new_cursor = str_utf8_forward(src, cursor);
+		if(new_cursor >= dst_size) // reserve 1 byte for the null termination
+			break;
+		else
+			cursor = new_cursor;
+		--num;
+	}
+
+	str_copy(dst, src, cursor < dst_size ? cursor + 1 : dst_size);
+}
+
 void str_utf8_stats(const char *str, size_t max_size, size_t max_count, size_t *size, size_t *count)
 {
 	const char *cursor = str;
@@ -4106,6 +4150,7 @@ void cmdline_free(int argc, const char **argv)
 #endif
 }
 
+#if !defined(CONF_PLATFORM_ANDROID)
 PROCESS shell_execute(const char *file, EShellExecuteWindowState window_state)
 {
 #if defined(CONF_FAMILY_WINDOWS)
@@ -4249,6 +4294,7 @@ int open_file(const char *path)
 	return open_link(buf);
 #endif
 }
+#endif // !defined(CONF_PLATFORM_ANDROID)
 
 struct SECURE_RANDOM_DATA
 {
@@ -4546,7 +4592,7 @@ void os_locale_str(char *locale, size_t length)
 		{
 			locale[i] = '-';
 		}
-		else if(locale[i] != '-' && !(locale[i] >= 'a' && locale[i] <= 'z') && !(locale[i] >= 'A' && locale[i] <= 'Z') && !(locale[i] >= '0' && locale[i] <= '9'))
+		else if(locale[i] != '-' && !(locale[i] >= 'a' && locale[i] <= 'z') && !(locale[i] >= 'A' && locale[i] <= 'Z') && !(str_isnum(locale[i])))
 		{
 			locale[i] = '\0';
 			break;

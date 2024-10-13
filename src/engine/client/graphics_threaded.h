@@ -93,7 +93,6 @@ public:
 		// texture commands
 		CMD_TEXTURE_CREATE,
 		CMD_TEXTURE_DESTROY,
-		CMD_TEXTURE_UPDATE,
 		CMD_TEXT_TEXTURES_CREATE,
 		CMD_TEXT_TEXTURES_DESTROY,
 		CMD_TEXT_TEXTURE_UPDATE,
@@ -527,25 +526,8 @@ public:
 
 		size_t m_Width;
 		size_t m_Height;
-		int m_Format;
-		int m_StoreFormat;
 		int m_Flags;
-		uint8_t *m_pData; // will be freed by the command processor
-	};
-
-	struct SCommand_Texture_Update : public SCommand
-	{
-		SCommand_Texture_Update() :
-			SCommand(CMD_TEXTURE_UPDATE) {}
-
-		// texture information
-		int m_Slot;
-
-		int m_X;
-		int m_Y;
-		size_t m_Width;
-		size_t m_Height;
-		int m_Format;
+		// data must be in RGBA format
 		uint8_t *m_pData; // will be freed by the command processor
 	};
 
@@ -816,8 +798,6 @@ class CGraphics_Threaded : public IEngineGraphics
 	size_t m_FirstFreeTexture;
 	int m_TextureMemoryUsage;
 
-	std::vector<uint8_t> m_vSpriteHelper;
-
 	bool m_WarnPngliteIncompatibleImages = false;
 
 	std::vector<SWarning> m_vWarnings;
@@ -964,17 +944,14 @@ public:
 
 	IGraphics::CTextureHandle FindFreeTextureIndex();
 	void FreeTextureIndex(CTextureHandle *pIndex);
-	int UnloadTexture(IGraphics::CTextureHandle *pIndex) override;
+	void UnloadTexture(IGraphics::CTextureHandle *pIndex) override;
 	IGraphics::CTextureHandle LoadTextureRaw(const CImageInfo &Image, int Flags, const char *pTexName = nullptr) override;
 	IGraphics::CTextureHandle LoadTextureRawMove(CImageInfo &Image, int Flags, const char *pTexName = nullptr) override;
-	int LoadTextureRawSub(IGraphics::CTextureHandle TextureId, int x, int y, const CImageInfo &Image) override;
-	IGraphics::CTextureHandle NullTexture() const override;
 
 	bool LoadTextTextures(size_t Width, size_t Height, CTextureHandle &TextTexture, CTextureHandle &TextOutlineTexture, uint8_t *pTextData, uint8_t *pTextOutlineData) override;
 	bool UnloadTextTextures(CTextureHandle &TextTexture, CTextureHandle &TextOutlineTexture) override;
 	bool UpdateTextTexture(CTextureHandle TextureId, int x, int y, size_t Width, size_t Height, const uint8_t *pData) override;
 
-	CTextureHandle LoadSpriteTextureImpl(const CImageInfo &FromImageInfo, int x, int y, size_t w, size_t h, const char *pName);
 	CTextureHandle LoadSpriteTexture(const CImageInfo &FromImageInfo, const struct CDataSprite *pSprite) override;
 
 	bool IsImageSubFullyTransparent(const CImageInfo &FromImageInfo, int x, int y, int w, int h) override;
@@ -982,13 +959,11 @@ public:
 
 	// simple uncompressed RGBA loaders
 	IGraphics::CTextureHandle LoadTexture(const char *pFilename, int StorageType, int Flags = 0) override;
-	bool LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType) override;
+	bool LoadPng(CImageInfo &Image, const char *pFilename, int StorageType) override;
+	bool LoadPng(CImageInfo &Image, const uint8_t *pData, size_t DataSize, const char *pContextName) override;
 
-	bool CheckImageDivisibility(const char *pFileName, CImageInfo &Img, int DivX, int DivY, bool AllowResize) override;
-	bool IsImageFormatRGBA(const char *pFileName, CImageInfo &Img) override;
-
-	void CopyTextureBufferSub(uint8_t *pDestBuffer, const CImageInfo &SourceImage, size_t SubOffsetX, size_t SubOffsetY, size_t SubCopyWidth, size_t SubCopyHeight) override;
-	void CopyTextureFromTextureBufferSub(uint8_t *pDestBuffer, size_t DestWidth, size_t DestHeight, const CImageInfo &SourceImage, size_t SrcSubOffsetX, size_t SrcSubOffsetY, size_t SrcSubCopyWidth, size_t SrcSubCopyHeight) override;
+	bool CheckImageDivisibility(const char *pContextName, CImageInfo &Image, int DivX, int DivY, bool AllowResize) override;
+	bool IsImageFormatRgba(const char *pContextName, const CImageInfo &Image) override;
 
 	void TextureSet(CTextureHandle TextureId) override;
 
@@ -1237,7 +1212,8 @@ public:
 	void SetWindowParams(int FullscreenMode, bool IsBorderless) override;
 	bool SetWindowScreen(int Index) override;
 	void Move(int x, int y) override;
-	void Resize(int w, int h, int RefreshRate) override;
+	bool Resize(int w, int h, int RefreshRate) override;
+	void ResizeToScreen() override;
 	void GotResized(int w, int h, int RefreshRate) override;
 	void UpdateViewport(int X, int Y, int W, int H, bool ByResize) override;
 	void AddWindowResizeListener(WINDOW_RESIZE_FUNC pFunc) override;

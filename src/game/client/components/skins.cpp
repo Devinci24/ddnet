@@ -6,6 +6,7 @@
 #include <base/system.h>
 
 #include <engine/engine.h>
+#include <engine/gfx/image_manipulation.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/storage.h>
@@ -47,7 +48,7 @@ void CSkins::CGetPngFile::OnCompletion(EHttpState State)
 	// Maybe this should start another thread to load the png in instead of stalling the curl thread
 	if(State == EHttpState::DONE)
 	{
-		m_pSkins->LoadSkinPNG(m_Info, Dest(), Dest(), IStorage::TYPE_SAVE);
+		m_pSkins->LoadSkinPng(m_Info, Dest(), Dest(), IStorage::TYPE_SAVE);
 	}
 }
 
@@ -83,6 +84,7 @@ int CSkins::SkinScan(const char *pName, int IsDir, int DirType, void *pUser)
 	if(!CSkin::IsValidName(aSkinName))
 	{
 		log_error("skins", "Skin name is not valid: %s", aSkinName);
+		log_error("skins", "%s", CSkin::m_aSkinNameRestrictions);
 		return 0;
 	}
 
@@ -134,14 +136,14 @@ static void CheckMetrics(CSkin::SSkinMetricVariable &Metrics, const uint8_t *pIm
 const CSkin *CSkins::LoadSkin(const char *pName, const char *pPath, int DirType)
 {
 	CImageInfo Info;
-	if(!LoadSkinPNG(Info, pName, pPath, DirType))
+	if(!LoadSkinPng(Info, pName, pPath, DirType))
 		return nullptr;
 	return LoadSkin(pName, Info);
 }
 
-bool CSkins::LoadSkinPNG(CImageInfo &Info, const char *pName, const char *pPath, int DirType)
+bool CSkins::LoadSkinPng(CImageInfo &Info, const char *pName, const char *pPath, int DirType)
 {
-	if(!Graphics()->LoadPNG(&Info, pPath, DirType))
+	if(!Graphics()->LoadPng(Info, pPath, DirType))
 	{
 		log_error("skins", "Failed to load skin PNG: %s", pName);
 		return false;
@@ -156,7 +158,7 @@ const CSkin *CSkins::LoadSkin(const char *pName, CImageInfo &Info)
 		log_error("skins", "Skin failed image divisibility: %s", pName);
 		return nullptr;
 	}
-	if(!Graphics()->IsImageFormatRGBA(pName, Info))
+	if(!Graphics()->IsImageFormatRgba(pName, Info))
 	{
 		log_error("skins", "Skin format is not RGBA: %s", pName);
 		return nullptr;
@@ -197,20 +199,20 @@ const CSkin *CSkins::LoadSkin(const char *pName, CImageInfo &Info)
 	int BodyOutlineOffsetX = g_pData->m_aSprites[SPRITE_TEE_BODY_OUTLINE].m_X * BodyOutlineGridPixelsWidth;
 	int BodyOutlineOffsetY = g_pData->m_aSprites[SPRITE_TEE_BODY_OUTLINE].m_Y * BodyOutlineGridPixelsHeight;
 
-	int BodyWidth = g_pData->m_aSprites[SPRITE_TEE_BODY].m_W * (Info.m_Width / g_pData->m_aSprites[SPRITE_TEE_BODY].m_pSet->m_Gridx); // body width
-	int BodyHeight = g_pData->m_aSprites[SPRITE_TEE_BODY].m_H * (Info.m_Height / g_pData->m_aSprites[SPRITE_TEE_BODY].m_pSet->m_Gridy); // body height
+	size_t BodyWidth = g_pData->m_aSprites[SPRITE_TEE_BODY].m_W * (Info.m_Width / g_pData->m_aSprites[SPRITE_TEE_BODY].m_pSet->m_Gridx); // body width
+	size_t BodyHeight = g_pData->m_aSprites[SPRITE_TEE_BODY].m_H * (Info.m_Height / g_pData->m_aSprites[SPRITE_TEE_BODY].m_pSet->m_Gridy); // body height
 	if(BodyWidth > Info.m_Width || BodyHeight > Info.m_Height)
 		return nullptr;
-	unsigned char *pData = (unsigned char *)Info.m_pData;
+	uint8_t *pData = Info.m_pData;
 	const int PixelStep = 4;
 	int Pitch = Info.m_Width * PixelStep;
 
 	// dig out blood color
 	{
 		int64_t aColors[3] = {0};
-		for(int y = 0; y < BodyHeight; y++)
+		for(size_t y = 0; y < BodyHeight; y++)
 		{
-			for(int x = 0; x < BodyWidth; x++)
+			for(size_t x = 0; x < BodyWidth; x++)
 			{
 				uint8_t AlphaValue = pData[y * Pitch + x * PixelStep + 3];
 				if(AlphaValue > 128)
@@ -236,22 +238,15 @@ const CSkin *CSkins::LoadSkin(const char *pName, CImageInfo &Info)
 	// get feet outline size
 	CheckMetrics(Skin.m_Metrics.m_Feet, pData, Pitch, FeetOutlineOffsetX, FeetOutlineOffsetY, FeetOutlineWidth, FeetOutlineHeight);
 
-	// make the texture gray scale
-	for(int i = 0; i < Info.m_Width * Info.m_Height; i++)
-	{
-		int v = (pData[i * PixelStep] + pData[i * PixelStep + 1] + pData[i * PixelStep + 2]) / 3;
-		pData[i * PixelStep] = v;
-		pData[i * PixelStep + 1] = v;
-		pData[i * PixelStep + 2] = v;
-	}
+	ConvertToGrayscale(Info);
 
 	int aFreq[256] = {0};
 	int OrgWeight = 0;
 	int NewWeight = 192;
 
 	// find most common frequency
-	for(int y = 0; y < BodyHeight; y++)
-		for(int x = 0; x < BodyWidth; x++)
+	for(size_t y = 0; y < BodyHeight; y++)
+		for(size_t x = 0; x < BodyWidth; x++)
 		{
 			if(pData[y * Pitch + x * PixelStep + 3] > 128)
 				aFreq[pData[y * Pitch + x * PixelStep]]++;
@@ -266,8 +261,8 @@ const CSkin *CSkins::LoadSkin(const char *pName, CImageInfo &Info)
 	// reorder
 	int InvOrgWeight = 255 - OrgWeight;
 	int InvNewWeight = 255 - NewWeight;
-	for(int y = 0; y < BodyHeight; y++)
-		for(int x = 0; x < BodyWidth; x++)
+	for(size_t y = 0; y < BodyHeight; y++)
+		for(size_t x = 0; x < BodyWidth; x++)
 		{
 			int v = pData[y * Pitch + x * PixelStep];
 			if(v <= OrgWeight && OrgWeight == 0)
@@ -297,7 +292,7 @@ const CSkin *CSkins::LoadSkin(const char *pName, CImageInfo &Info)
 
 	if(g_Config.m_Debug)
 	{
-		log_trace("skins", "Loaded skin %s", Skin.GetName());
+		log_trace("skins", "Loaded skin '%s'", Skin.GetName());
 	}
 
 	auto &&pSkin = std::make_unique<CSkin>(std::move(Skin));
@@ -437,4 +432,46 @@ const CSkin *CSkins::FindImpl(const char *pName)
 	++m_DownloadingSkins;
 
 	return nullptr;
+}
+
+void CSkins::RandomizeSkin(int Dummy)
+{
+	static const float s_aSchemes[] = {1.0f / 2.0f, 1.0f / 3.0f, 1.0f / -3.0f, 1.0f / 12.0f, 1.0f / -12.0f}; // complementary, triadic, analogous
+	const bool UseCustomColor = Dummy ? g_Config.m_ClDummyUseCustomColor : g_Config.m_ClPlayerUseCustomColor;
+	if(UseCustomColor)
+	{
+		float GoalSat = random_float(0.3f, 1.0f);
+		float MaxBodyLht = 1.0f - GoalSat * GoalSat; // max allowed lightness before we start losing saturation
+
+		ColorHSLA Body;
+		Body.h = random_float();
+		Body.l = random_float(0.0f, MaxBodyLht);
+		Body.s = clamp(GoalSat * GoalSat / (1.0f - Body.l), 0.0f, 1.0f);
+
+		ColorHSLA Feet;
+		Feet.h = std::fmod(Body.h + s_aSchemes[rand() % std::size(s_aSchemes)], 1.0f);
+		Feet.l = random_float();
+		Feet.s = clamp(GoalSat * GoalSat / (1.0f - Feet.l), 0.0f, 1.0f);
+
+		unsigned *pColorBody = Dummy ? &g_Config.m_ClDummyColorBody : &g_Config.m_ClPlayerColorBody;
+		unsigned *pColorFeet = Dummy ? &g_Config.m_ClDummyColorFeet : &g_Config.m_ClPlayerColorFeet;
+
+		*pColorBody = Body.Pack(false);
+		*pColorFeet = Feet.Pack(false);
+	}
+
+	const size_t SkinNameSize = Dummy ? sizeof(g_Config.m_ClDummySkin) : sizeof(g_Config.m_ClPlayerSkin);
+	char aRandomSkinName[MAX_SKIN_LENGTH];
+	str_copy(aRandomSkinName, "default", SkinNameSize);
+	if(!m_pClient->m_Skins.GetSkinsUnsafe().empty())
+	{
+		do
+		{
+			auto it = m_pClient->m_Skins.GetSkinsUnsafe().begin();
+			std::advance(it, rand() % m_pClient->m_Skins.GetSkinsUnsafe().size());
+			str_copy(aRandomSkinName, (*it).second->GetName(), SkinNameSize);
+		} while(!str_comp(aRandomSkinName, "x_ninja") || !str_comp(aRandomSkinName, "x_spec"));
+	}
+	char *pSkinName = Dummy ? g_Config.m_ClDummySkin : g_Config.m_ClPlayerSkin;
+	str_copy(pSkinName, aRandomSkinName, SkinNameSize);
 }

@@ -84,7 +84,10 @@ void CEditor::RenderServerSettingsEditor(CUIRect View, bool ShowServerSettingsEd
 			s_CommandSelectedIndex = m_Map.m_vSettings.size() - 1;
 		if(s_CommandSelectedIndex >= 0)
 			m_SettingsCommandInput.Set(m_Map.m_vSettings[s_CommandSelectedIndex].m_aCommand);
+		else
+			m_SettingsCommandInput.Clear();
 		m_Map.OnModify();
+		m_MapSettingsCommandContext.Update();
 		s_ListBox.ScrollToSelected();
 	}
 
@@ -314,7 +317,7 @@ void CEditor::DoMapSettingsEditBox(CMapSettingsBackend::CContext *pContext, cons
 	};
 
 	// If we have a valid command, display the help in the tooltip
-	if(Context.CommandIsValid())
+	if(Context.CommandIsValid() && pLineInput->IsActive() && Ui()->HotItem() == nullptr)
 		Context.GetCommandHelpText(m_aTooltip, sizeof(m_aTooltip));
 
 	CUIRect ToolBar = *pRect;
@@ -396,7 +399,7 @@ void CEditor::DoMapSettingsEditBox(CMapSettingsBackend::CContext *pContext, cons
 }
 
 template<typename T>
-int CEditor::DoEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CLineInput *pLineInput, const CUIRect *pEditBoxRect, int x, float MaxHeight, bool AutoWidth, const std::vector<T> &vData, const FDropdownRenderCallback<T> &fnMatchCallback)
+int CEditor::DoEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CLineInput *pLineInput, const CUIRect *pEditBoxRect, int x, float MaxHeight, bool AutoWidth, const std::vector<T> &vData, const FDropdownRenderCallback<T> &pfnMatchCallback)
 {
 	// Do an edit box with a possible dropdown
 	// This is a generic method which can display any data we want
@@ -436,7 +439,7 @@ int CEditor::DoEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CLineInput *p
 			pDropdown->m_Selected %= vData.size();
 		}
 
-		int Selected = RenderEditBoxDropdown<T>(pDropdown, *pEditBoxRect, pLineInput, x, MaxHeight, AutoWidth, vData, fnMatchCallback);
+		int Selected = RenderEditBoxDropdown<T>(pDropdown, *pEditBoxRect, pLineInput, x, MaxHeight, AutoWidth, vData, pfnMatchCallback);
 		if(Selected != -1)
 			pDropdown->m_Selected = Selected;
 
@@ -457,7 +460,7 @@ int CEditor::DoEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CLineInput *p
 }
 
 template<typename T>
-int CEditor::RenderEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CUIRect View, CLineInput *pLineInput, int x, float MaxHeight, bool AutoWidth, const std::vector<T> &vData, const FDropdownRenderCallback<T> &fnMatchCallback)
+int CEditor::RenderEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CUIRect View, CLineInput *pLineInput, int x, float MaxHeight, bool AutoWidth, const std::vector<T> &vData, const FDropdownRenderCallback<T> &pfnMatchCallback)
 {
 	// Render a dropdown tied to an edit box/line input
 	auto *pListBox = &pDropdown->m_ListBox;
@@ -503,7 +506,7 @@ int CEditor::RenderEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CUIRect V
 
 			// Call the callback to fill the current line string
 			char aBuf[128];
-			fnMatchCallback(vData.at(i), aBuf, Props.m_vColorSplits);
+			pfnMatchCallback(vData.at(i), aBuf, Props.m_vColorSplits);
 
 			LargestWidth = maximum(LargestWidth, TextRender()->TextWidth(12.0f, aBuf) + 10.0f);
 			if(!Item.m_Visible)
@@ -1046,9 +1049,9 @@ void CEditor::MapSettingsDropdownRenderCallback(const SPossibleValueMatch &Match
 
 CMapSettingsBackend::CContext *CMapSettingsBackend::ms_pActiveContext = nullptr;
 
-void CMapSettingsBackend::Init(CEditor *pEditor)
+void CMapSettingsBackend::OnInit(CEditor *pEditor)
 {
-	CEditorComponent::Init(pEditor);
+	CEditorComponent::OnInit(pEditor);
 
 	// Register values loader
 	InitValueLoaders();

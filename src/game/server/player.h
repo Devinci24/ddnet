@@ -173,6 +173,7 @@ public:
 	};
 
 	bool m_DND;
+	bool m_Whispers;
 	int64_t m_FirstVoteTick;
 	char m_aTimeoutCode[64];
 
@@ -180,6 +181,7 @@ public:
 	int Pause(int State, bool Force);
 	int ForcePause(int Time);
 	int IsPaused() const;
+	bool CanSpec() const;
 
 	bool IsPlaying() const;
 	int64_t m_Last_KickVote;
@@ -225,6 +227,8 @@ public:
 	bool m_VotedForPractice;
 	int m_SwapTargetsClientId; //Client ID of the swap target for the given player
 	bool m_BirthdayAnnounced;
+
+	int m_RescueMode;
 
 	CSaveTee m_LastTeleTee;
 };

@@ -82,8 +82,8 @@ Client
 Connecting to
 == Conectare la
 
-Connection Problems...
-== Probleme la conexiune...
+Connection Problems…
+== Probleme la conexiune…
 
 Console
 == Consolă
@@ -285,9 +285,6 @@ Player
 
 Player country:
 == Țara jucătorului:
-
-Player options
-== Opțiuni jucător
 
 Players
 == Jucători
@@ -510,9 +507,6 @@ Your skin
 Reset to defaults
 == Setări implicite
 
-Round
-== Runda
-
 Lht.
 == Luminozitate
 
@@ -564,7 +558,16 @@ Could not initialize the given graphics backend, reverting to the default backen
 Could not initialize the given graphics backend, this is probably because you didn't install the driver of the integrated graphics card.
 == 
 
+Could not resolve connect address '%s'. See local console for details.
+== 
+
+Connect address error
+== 
+
 Could not save downloaded map. Try manually deleting this file: %s
+== 
+
+Could not connect dummy
 == 
 
 Error playing demo
@@ -600,13 +603,16 @@ Connected
 Loading map file from storage
 == 
 
+Loading demo file from storage
+== 
+
 Loading DDNet Client
 == 
 
-Why are you slowmo replaying to read this?
+Initializing components
 == 
 
-Initializing components
+Why are you slowmo replaying to read this?
 == 
 
 Initializing assets
@@ -628,6 +634,9 @@ Restarting. Please wait…
 == 
 
 Loading skin files
+== 
+
+Search
 == 
 
 Searching
@@ -675,6 +684,10 @@ Angle:
 Multi-View
 == 
 
+[Spectating]
+Following %s
+== 
+
 Server best:
 == 
 
@@ -702,6 +715,12 @@ Reset
 Press a key…
 == 
 
+Settings
+== 
+
+Editor
+== 
+
 Main menu
 == 
 
@@ -709,30 +728,6 @@ Browser
 == 
 
 Ghost
-== 
-
-Settings
-== 
-
-Editor
-== 
-
-Trying to determine UDP connectivity...
-== 
-
-UDP seems to be filtered.
-== 
-
-UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or network accelerators.
-== 
-
-No answer from server yet.
-== 
-
-Getting game info
-== 
-
-Requesting to join the game
 == 
 
 Reconnect in %d sec
@@ -775,6 +770,12 @@ Your nickname '%s' is already used (%d points). Do you still want to use it?
 == 
 
 Checking for existing player with your name
+== 
+
+Save skin
+== 
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == 
 
 There's an unsaved map in the editor, you might want to save it.
@@ -825,6 +826,33 @@ Show DDNet map finishes in server browser
 transmits your player name to info.ddnet.org
 == 
 
+Unable to save the skin
+== 
+
+Unable to save the skin with a reserved name
+== 
+
+Trying to determine UDP connectivity…
+== 
+
+UDP seems to be filtered.
+== 
+
+UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or network accelerators.
+== 
+
+No answer from server yet.
+== 
+
+%d/%d KiB (%.1f KiB/s)
+== 
+
+Getting game info
+== 
+
+Requesting to join the game
+== 
+
 Theme
 == 
 
@@ -855,7 +883,10 @@ CHN
 Getting server list from master server
 == 
 
-Search
+No local servers found (ports %d-%d)
+== 
+
+Example of usage
 == 
 
 Exclude
@@ -874,6 +905,9 @@ Exclude
 == 
 
 Are you sure that you want to disconnect and switch to a different server?
+== 
+
+No login required
 == 
 
 Filter connecting players
@@ -1093,6 +1127,12 @@ Are you sure that you want to disconnect?
 Connect Dummy
 == 
 
+Dummy is not allowed on this server
+== 
+
+Please wait…
+== 
+
 Connecting dummy
 == 
 
@@ -1147,6 +1187,10 @@ Switch weapon when out of ammo
 Skip the main menu
 == 
 
+[Hertz]
+Hz
+== 
+
 Refresh Rate
 == 
 
@@ -1181,6 +1225,9 @@ Max CSVs
 == 
 
 Dummy
+== 
+
+Player info change cooldown
 == 
 
 Download skins
@@ -1392,6 +1439,9 @@ Map sound volume
 Background music volume
 == 
 
+Tee
+== 
+
 Appearance
 == 
 
@@ -1431,10 +1481,7 @@ Show votes window after voting
 DDRace HUD
 == 
 
-Use DDRace Scoreboard
-== 
-
-Show client IDs in scoreboard
+Show client IDs (scoreboard, chat, spectator)
 == 
 
 Show DDRace HUD
@@ -1461,7 +1508,13 @@ Show freeze bars
 Opacity of freeze bars inside freeze
 == 
 
+Always show chat
+== 
+
 Show names in chat in team colors
+== 
+
+Show only chat messages from team members
 == 
 
 Use old chat style
@@ -1503,7 +1556,13 @@ Show clan above name plates
 Clan plates size
 == 
 
-Show hook strength indicator
+Show friend mark (♥) in name plates
+== 
+
+Show hook strength icon indicator
+== 
+
+Show hook strength number indicator
 == 
 
 Show other players' key presses
@@ -1521,7 +1580,16 @@ Same clan color in scoreboard
 Hook collision line
 == 
 
+Show own player's hook collision line
+== 
+
+Always show own player's hook collision line
+== 
+
 Show other players' hook collision lines
+== 
+
+Always show other players' hook collision lines
 == 
 
 Hook collision line width
@@ -1662,9 +1730,6 @@ Regular background color
 Entities background color
 == 
 
-Reload
-== 
-
 Use current map as background
 == 
 
@@ -1689,7 +1754,7 @@ DDNet %s is available:
 Update now
 == 
 
-Updating...
+Updating…
 == 
 
 DDNet Client updated!
@@ -1699,6 +1764,21 @@ No updates available
 == 
 
 Check now
+== 
+
+Basic
+== 
+
+Custom
+== 
+
+Are you sure that you want to delete '%s'?
+== 
+
+Delete skin
+== 
+
+Unable to delete skin
 == 
 
 Emoticons
@@ -1759,13 +1839,27 @@ DDNet %s is out!
 Downloading %s:
 == 
 
-Update failed! Check log...
+Update failed! Check log…
 == 
 
 Loading race demo files
 == 
 
+Round %d/%d
+== 
+
+[Spectators]
+%d others…
+== 
+
 Super
+== 
+
+[Team and size]
+%d\n(%d/%d)
+== 
+
+Team %d (%d/%d)
 == 
 
 Manual
@@ -1778,6 +1872,30 @@ Auto
 == 
 
 Replay
+== 
+
+[skins]
+Body
+== 
+
+[skins]
+Marking
+== 
+
+[skins]
+Decoration
+== 
+
+[skins]
+Hands
+== 
+
+[skins]
+Feet
+== 
+
+[skins]
+Eyes
 == 
 
 Loading sound files
@@ -1823,4 +1941,7 @@ Grabs
 == 
 
 Moved ingame
+== 
+
+https://wiki.ddnet.org/wiki/Mapping
 == 

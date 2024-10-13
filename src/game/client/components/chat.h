@@ -11,7 +11,9 @@
 
 #include <game/client/component.h>
 #include <game/client/lineinput.h>
+#include <game/client/render.h>
 #include <game/client/skin.h>
+#include <game/generated/protocol7.h>
 
 class CChat : public CComponent
 {
@@ -44,13 +46,9 @@ class CChat : public CComponent
 		int m_QuadContainerIndex;
 
 		char m_aSkinName[std::size(g_Config.m_ClPlayerSkin)];
-		CSkin::SSkinTextures m_RenderSkin;
-		CSkin::SSkinMetrics m_RenderSkinMetrics;
-		bool m_CustomColoredSkin;
-		ColorRGBA m_ColorBody;
-		ColorRGBA m_ColorFeet;
-
 		bool m_HasRenderTee;
+		CTeeRenderInfo m_TeeRenderInfo;
+
 		float m_TextYOffset;
 
 		int m_TimesRepeated;
@@ -155,8 +153,6 @@ public:
 	void AddLine(int ClientId, int Team, const char *pLine);
 	void EnableMode(int Team);
 	void DisableMode();
-	void Say(int Team, const char *pLine);
-	void SayChat(const char *pLine);
 	void RegisterCommand(const char *pName, const char *pParams, const char *pHelpText);
 	void UnregisterCommand(const char *pName);
 	void Echo(const char *pString);
@@ -183,5 +179,22 @@ public:
 	float MessagePaddingY() const { return FontSize() * (1 / 6.f); }
 	float MessageTeeSize() const { return FontSize() * (7 / 6.f); }
 	float MessageRounding() const { return FontSize() * (1 / 2.f); }
+
+	// ----- send functions -----
+
+	// Sends a chat message to the server.
+	//
+	// @param Team MODE_ALL=0 MODE_TEAM=1
+	// @param pLine the chat message
+	void SendChat(int Team, const char *pLine);
+
+	// Sends a chat message to the server.
+	//
+	// It uses a queue with a maximum of 3 entries
+	// that ensures there is a minimum delay of one second
+	// between sent messages.
+	//
+	// It uses team or public chat depending on m_Mode.
+	void SendChatQueued(const char *pLine);
 };
 #endif

@@ -1,16 +1,20 @@
 #ifndef GAME_CLIENT_SKIN_H
 #define GAME_CLIENT_SKIN_H
+
 #include <base/color.h>
 #include <base/system.h>
 #include <base/vmath.h>
+
 #include <engine/graphics.h>
+#include <engine/shared/protocol.h>
+
 #include <limits>
 
 // do this better and nicer
 struct CSkin
 {
 private:
-	char m_aName[24];
+	char m_aName[MAX_SKIN_LENGTH];
 
 public:
 	struct SSkinTextures
@@ -155,6 +159,7 @@ public:
 
 	const char *GetName() const { return m_aName; }
 
+	// has to be kept in sync with m_aSkinNameRestrictions
 	static bool IsValidName(const char *pName)
 	{
 		if(pName[0] == '\0' || str_length(pName) >= (int)sizeof(CSkin("").m_aName))
@@ -171,6 +176,7 @@ public:
 		}
 		return true;
 	}
+	static constexpr char m_aSkinNameRestrictions[] = "Skin names must be valid filenames shorter than 24 characters.";
 };
 
 #endif

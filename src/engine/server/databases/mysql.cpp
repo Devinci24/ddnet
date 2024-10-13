@@ -89,6 +89,7 @@ public:
 	void BindInt(int Idx, int Value) override;
 	void BindInt64(int Idx, int64_t Value) override;
 	void BindFloat(int Idx, float Value) override;
+	void BindNull(int Idx) override;
 
 	void Print() override {}
 	bool Step(bool *pEnd, char *pError, int ErrorSize) override;
@@ -330,8 +331,11 @@ bool CMysqlConnection::PrepareStatement(const char *pStmt, char *pError, int Err
 	unsigned NumParameters = mysql_stmt_param_count(m_pStmt.get());
 	m_vStmtParameters.resize(NumParameters);
 	m_vStmtParameterExtras.resize(NumParameters);
-	mem_zero(&m_vStmtParameters[0], sizeof(m_vStmtParameters[0]) * m_vStmtParameters.size());
-	mem_zero(&m_vStmtParameterExtras[0], sizeof(m_vStmtParameterExtras[0]) * m_vStmtParameterExtras.size());
+	if(NumParameters)
+	{
+		mem_zero(m_vStmtParameters.data(), sizeof(m_vStmtParameters[0]) * m_vStmtParameters.size());
+		mem_zero(m_vStmtParameterExtras.data(), sizeof(m_vStmtParameterExtras[0]) * m_vStmtParameterExtras.size());
+	}
 	return false;
 }
 
@@ -421,12 +425,28 @@ void CMysqlConnection::BindFloat(int Idx, float Value)
 	pParam->error = nullptr;
 }
 
+void CMysqlConnection::BindNull(int Idx)
+{
+	m_NewQuery = true;
+	Idx -= 1;
+	dbg_assert(0 <= Idx && Idx < (int)m_vStmtParameters.size(), "index out of bounds");
+
+	MYSQL_BIND *pParam = &m_vStmtParameters[Idx];
+	pParam->buffer_type = MYSQL_TYPE_NULL;
+	pParam->buffer = nullptr;
+	pParam->buffer_length = 0;
+	pParam->length = nullptr;
+	pParam->is_null = nullptr;
+	pParam->is_unsigned = false;
+	pParam->error = nullptr;
+}
+
 bool CMysqlConnection::Step(bool *pEnd, char *pError, int ErrorSize)
 {
 	if(m_NewQuery)
 	{
 		m_NewQuery = false;
-		if(mysql_stmt_bind_param(m_pStmt.get(), &m_vStmtParameters[0]))
+		if(mysql_stmt_bind_param(m_pStmt.get(), m_vStmtParameters.data()))
 		{
 			StoreErrorStmt("bind_param");
 			str_copy(pError, m_aErrorDetail, ErrorSize);
@@ -457,7 +477,7 @@ bool CMysqlConnection::ExecuteUpdate(int *pNumUpdated, char *pError, int ErrorSi
 	if(m_NewQuery)
 	{
 		m_NewQuery = false;
-		if(mysql_stmt_bind_param(m_pStmt.get(), &m_vStmtParameters[0]))
+		if(mysql_stmt_bind_param(m_pStmt.get(), m_vStmtParameters.data()))
 		{
 			StoreErrorStmt("bind_param");
 			str_copy(pError, m_aErrorDetail, ErrorSize);

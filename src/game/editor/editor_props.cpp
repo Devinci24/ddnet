@@ -19,7 +19,7 @@ template<typename E>
 SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pProps, int *pIds, int *pNewVal, const std::vector<ColorRGBA> &vColors)
 {
 	int Change = -1;
-	EEditState State = EEditState::EDITING;
+	EEditState State = EEditState::NONE;
 
 	for(int i = 0; pProps[i].m_pName; i++)
 	{
@@ -39,10 +39,10 @@ SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pPro
 
 			Shifter.VSplitRight(10.0f, &Shifter, &Inc);
 			Shifter.VSplitLeft(10.0f, &Dec, &Shifter);
-			str_from_int(pProps[i].m_Value, aBuf);
+			str_format(aBuf, sizeof(aBuf), "%d", pProps[i].m_Value);
 			auto NewValueRes = UiDoValueSelector((char *)&pIds[i], &Shifter, "", pProps[i].m_Value, pProps[i].m_Min, pProps[i].m_Max, 1, 1.0f, "Use left mouse button to drag and change the value. Hold shift to be more precise. Rightclick to edit as text.", false, false, 0, pColor);
 			int NewValue = NewValueRes.m_Value;
-			if(NewValue != pProps[i].m_Value || NewValueRes.m_State != EEditState::EDITING)
+			if(NewValue != pProps[i].m_Value || (NewValueRes.m_State != EEditState::NONE && NewValueRes.m_State != EEditState::EDITING))
 			{
 				*pNewVal = NewValue;
 				Change = i;
@@ -50,13 +50,13 @@ SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pPro
 			}
 			if(DoButton_FontIcon((char *)&pIds[i] + 1, FONT_ICON_MINUS, 0, &Dec, 0, "Decrease", IGraphics::CORNER_L, 7.0f))
 			{
-				*pNewVal = pProps[i].m_Value - 1;
+				*pNewVal = clamp(pProps[i].m_Value - 1, pProps[i].m_Min, pProps[i].m_Max);
 				Change = i;
 				State = EEditState::ONE_GO;
 			}
 			if(DoButton_FontIcon(((char *)&pIds[i]) + 2, FONT_ICON_PLUS, 0, &Inc, 0, "Increase", IGraphics::CORNER_R, 7.0f))
 			{
-				*pNewVal = pProps[i].m_Value + 1;
+				*pNewVal = clamp(pProps[i].m_Value + 1, pProps[i].m_Min, pProps[i].m_Max);
 				Change = i;
 				State = EEditState::ONE_GO;
 			}
@@ -102,7 +102,7 @@ SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pPro
 				State = EEditState::ONE_GO;
 			}
 
-			if(NewValue != pProps[i].m_Value || NewValueRes.m_State != EEditState::EDITING)
+			if(NewValue != pProps[i].m_Value || (NewValueRes.m_State != EEditState::NONE && NewValueRes.m_State != EEditState::EDITING))
 			{
 				*pNewVal = NewValue % 360;
 				Change = i;
@@ -241,7 +241,7 @@ SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pPro
 
 			auto NewValueRes = UiDoValueSelector((char *)&pIds[i], &Shifter, aBuf, CurValue, 0, m_Map.m_vpEnvelopes.size(), 1, 1.0f, "Set Envelope", false, false, IGraphics::CORNER_NONE);
 			int NewVal = NewValueRes.m_Value;
-			if(NewVal != CurValue || NewValueRes.m_State != EEditState::EDITING)
+			if(NewVal != CurValue || (NewValueRes.m_State != EEditState::NONE && NewValueRes.m_State != EEditState::EDITING))
 			{
 				*pNewVal = NewVal;
 				Change = i;

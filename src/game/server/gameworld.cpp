@@ -129,6 +129,19 @@ void CGameWorld::Snap(int SnappingClient)
 	}
 }
 
+void CGameWorld::PostSnap()
+{
+	for(auto *pEnt : m_apFirstEntityTypes)
+	{
+		for(; pEnt;)
+		{
+			m_pNextTraverseEntity = pEnt->m_pNextTypeEntity;
+			pEnt->PostSnap();
+			pEnt = m_pNextTraverseEntity;
+		}
+	}
+}
+
 void CGameWorld::Reset()
 {
 	// reset all entities
@@ -199,7 +212,7 @@ void CGameWorld::Tick()
 	if(!m_Paused)
 	{
 		if(GameServer()->m_pController->IsForceBalanced())
-			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, "Teams have been balanced");
+			GameServer()->SendChat(-1, TEAM_ALL, "Teams have been balanced");
 
 		// update all objects
 		for(int i = 0; i < NUM_ENTTYPES; i++)
@@ -255,6 +268,21 @@ void CGameWorld::Tick()
 		pChar->m_StrongWeakId = StrongWeakId;
 		StrongWeakId++;
 	}
+}
+
+ESaveResult CGameWorld::BlocksSave(int ClientId)
+{
+	// check all objects
+	for(auto *pEnt : m_apFirstEntityTypes)
+		for(; pEnt;)
+		{
+			m_pNextTraverseEntity = pEnt->m_pNextTypeEntity;
+			ESaveResult Result = pEnt->BlocksSave(ClientId);
+			if(Result != ESaveResult::SUCCESS)
+				return Result;
+			pEnt = m_pNextTraverseEntity;
+		}
+	return ESaveResult::SUCCESS;
 }
 
 void CGameWorld::SwapClients(int Client1, int Client2)

@@ -89,8 +89,8 @@ Client
 Connecting to
 == Verbinden met
 
-Connection Problems...
-== Verbindingsproblemen...
+Connection Problems…
+== Verbindingsproblemen…
 
 Console
 == Console
@@ -289,9 +289,6 @@ Player
 
 Player country:
 == Speler land:
-
-Player options
-== Speler opties
 
 Players
 == Spelers
@@ -511,9 +508,6 @@ Your skin
 Reset to defaults
 == Terugzetten naar standaardinstellingen
 
-Round
-== Ronde
-
 Lht.
 == Licht
 
@@ -625,8 +619,8 @@ DDNet %s is out!
 Downloading %s:
 == Downloaden %s:
 
-Update failed! Check log...
-== Update fout! Check log...
+Update failed! Check log…
+== Update fout! Check log…
 
 DDNet Client updated!
 == DDNet Client is geüpdate
@@ -665,9 +659,6 @@ Connecting dummy
 
 Connect Dummy
 == Verbind Dummy
-
-Reload
-== Herladen
 
 Deactivate
 == Deactiveren
@@ -807,9 +798,6 @@ DDNet
 DDNet Client needs to be restarted to complete update!
 == DDNet Client moet herstart worden om de update te voltooien!
 
-Use DDRace Scoreboard
-== Gebruik DDrace Scorebord
-
 Show score
 == Laat score zien
 
@@ -900,7 +888,7 @@ Show tiles layers from BG map
 DDNet %s is available:
 == DDNet %s is beschikbaar
 
-Updating...
+Updating…
 == Aan het updaten
 
 No updates available
@@ -1249,7 +1237,16 @@ Could not initialize the given graphics backend, reverting to the default backen
 Could not initialize the given graphics backend, this is probably because you didn't install the driver of the integrated graphics card.
 == 
 
+Could not resolve connect address '%s'. See local console for details.
+== 
+
+Connect address error
+== 
+
 Could not save downloaded map. Try manually deleting this file: %s
+== 
+
+Could not connect dummy
 == 
 
 Error playing demo
@@ -1273,10 +1270,13 @@ Connected
 Loading map file from storage
 == 
 
-Why are you slowmo replaying to read this?
+Loading demo file from storage
 == 
 
 Initializing components
+== 
+
+Why are you slowmo replaying to read this?
 == 
 
 Initializing assets
@@ -1339,6 +1339,10 @@ Angle:
 Multi-View
 == 
 
+[Spectating]
+Following %s
+== 
+
 Some map images could not be loaded. Check the local console for details.
 == 
 
@@ -1357,24 +1361,6 @@ Press a key…
 Main menu
 == 
 
-Trying to determine UDP connectivity...
-== 
-
-UDP seems to be filtered.
-== 
-
-UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or network accelerators.
-== 
-
-No answer from server yet.
-== 
-
-Getting game info
-== 
-
-Requesting to join the game
-== 
-
 Rename folder
 == 
 
@@ -1382,6 +1368,12 @@ Render complete
 == 
 
 Are you sure that you want to restart?
+== 
+
+Save skin
+== 
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == 
 
 There's an unsaved map in the editor, you might want to save it.
@@ -1411,7 +1403,43 @@ Videos directory
 Video was saved to '%s'
 == 
 
+Unable to save the skin
+== 
+
+Unable to save the skin with a reserved name
+== 
+
+Trying to determine UDP connectivity…
+== 
+
+UDP seems to be filtered.
+== 
+
+UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or network accelerators.
+== 
+
+No answer from server yet.
+== 
+
+%d/%d KiB (%.1f KiB/s)
+== 
+
+Getting game info
+== 
+
+Requesting to join the game
+== 
+
 Loading menu images
+== 
+
+No local servers found (ports %d-%d)
+== 
+
+Example of usage
+== 
+
+No login required
 == 
 
 Communities
@@ -1574,6 +1602,12 @@ Unable to delete the demo '%s'
 Unable to delete the folder '%s'. Make sure it's empty first.
 == 
 
+Dummy is not allowed on this server
+== 
+
+Please wait…
+== 
+
 Loading…
 == 
 
@@ -1592,6 +1626,10 @@ Deactivate all
 Menu opened. Press Esc key again to close menu.
 == 
 
+[Hertz]
+Hz
+== 
+
 Save power by lowering refresh rate (higher input latency)
 == 
 
@@ -1602,6 +1640,9 @@ Open the directory that contains the configuration and user files
 == 
 
 Open the directory to add custom themes
+== 
+
+Player info change cooldown
 == 
 
 Download community skins
@@ -1672,6 +1713,9 @@ Cancel
 Graphics card
 == 
 
+Tee
+== 
+
 Appearance
 == 
 
@@ -1693,7 +1737,7 @@ Show local time always
 DDRace HUD
 == 
 
-Show client IDs in scoreboard
+Show client IDs (scoreboard, chat, spectator)
 == 
 
 Show DDRace HUD
@@ -1720,13 +1764,25 @@ Show freeze bars
 Opacity of freeze bars inside freeze
 == 
 
+Always show chat
+== 
+
+Show only chat messages from team members
+== 
+
 Chat font size
 == 
 
 Chat width
 == 
 
-Show hook strength indicator
+Show friend mark (♥) in name plates
+== 
+
+Show hook strength icon indicator
+== 
+
+Show hook strength number indicator
 == 
 
 Authed name color in scoreboard
@@ -1736,6 +1792,15 @@ Same clan color in scoreboard
 == 
 
 Hook collision line
+== 
+
+Show own player's hook collision line
+== 
+
+Always show own player's hook collision line
+== 
+
+Always show other players' hook collision lines
 == 
 
 Hook collision line width
@@ -1813,6 +1878,21 @@ Entities background color
 Unregister protocol and file extensions
 == 
 
+Basic
+== 
+
+Custom
+== 
+
+Are you sure that you want to delete '%s'?
+== 
+
+Delete skin
+== 
+
+Unable to delete skin
+== 
+
 Extras
 == 
 
@@ -1825,8 +1905,49 @@ Open the directory to add custom assets
 Loading race demo files
 == 
 
+Round %d/%d
+== 
+
+[Spectators]
+%d others…
+== 
+
+[Team and size]
+%d\n(%d/%d)
+== 
+
+Team %d (%d/%d)
+== 
+
+[skins]
+Body
+== 
+
+[skins]
+Marking
+== 
+
+[skins]
+Decoration
+== 
+
+[skins]
+Hands
+== 
+
+[skins]
+Feet
+== 
+
+[skins]
+Eyes
+== 
+
 Loading sound files
 == 
 
 Moved ingame
+== 
+
+https://wiki.ddnet.org/wiki/Mapping
 == 

@@ -8,6 +8,7 @@
 #include <game/alloc.h>
 
 #include "gameworld.h"
+#include "save.h"
 
 class CCollision;
 class CGameContext;
@@ -123,6 +124,12 @@ public: // TODO: Maybe make protected
 	virtual void Snap(int SnappingClient) {}
 
 	/*
+		Function: PostSnap
+			Called after all clients received their snapshot.
+	*/
+	virtual void PostSnap() {}
+
+	/*
 		Function: SwapClients
 			Called when two players have swapped their client ids.
 
@@ -131,6 +138,15 @@ public: // TODO: Maybe make protected
 			Client2 - Second client ID
 	*/
 	virtual void SwapClients(int Client1, int Client2) {}
+
+	/*
+		Function: BlocksSave
+			Called to check if a team can be saved
+
+		Arguments:
+			ClientId - Client ID
+	*/
+	virtual ESaveResult BlocksSave(int ClientId) { return ESaveResult::SUCCESS; }
 
 	/*
 		Function GetOwnerId

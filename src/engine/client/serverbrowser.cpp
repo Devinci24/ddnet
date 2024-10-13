@@ -27,9 +27,6 @@
 #include <engine/http.h>
 #include <engine/storage.h>
 
-static constexpr const char *COMMUNITY_COUNTRY_NONE = "none";
-static constexpr const char *COMMUNITY_TYPE_NONE = "None";
-
 class CSortWrap
 {
 	typedef bool (CServerBrowser::*SortFunc)(int, int) const;
@@ -484,22 +481,26 @@ void CServerBrowser::Filter()
 
 				const char *pStr = g_Config.m_BrFilterString;
 				char aFilterStr[sizeof(g_Config.m_BrFilterString)];
+				char aFilterStrTrimmed[sizeof(g_Config.m_BrFilterString)];
 				while((pStr = str_next_token(pStr, IServerBrowser::SEARCH_EXCLUDE_TOKEN, aFilterStr, sizeof(aFilterStr))))
 				{
-					if(aFilterStr[0] == '\0')
+					str_copy(aFilterStrTrimmed, str_utf8_skip_whitespaces(aFilterStr));
+					str_utf8_trim_right(aFilterStrTrimmed);
+
+					if(aFilterStrTrimmed[0] == '\0')
 					{
 						continue;
 					}
 					auto MatchesFn = matchesPart;
-					const int FilterLen = str_length(aFilterStr);
-					if(aFilterStr[0] == '"' && aFilterStr[FilterLen - 1] == '"')
+					const int FilterLen = str_length(aFilterStrTrimmed);
+					if(aFilterStrTrimmed[0] == '"' && aFilterStrTrimmed[FilterLen - 1] == '"')
 					{
-						aFilterStr[FilterLen - 1] = '\0';
+						aFilterStrTrimmed[FilterLen - 1] = '\0';
 						MatchesFn = matchesExactly;
 					}
 
 					// match against server name
-					if(MatchesFn(Info.m_aName, aFilterStr))
+					if(MatchesFn(Info.m_aName, aFilterStrTrimmed))
 					{
 						Info.m_QuickSearchHit |= IServerBrowser::QUICK_SERVERNAME;
 					}
@@ -507,8 +508,8 @@ void CServerBrowser::Filter()
 					// match against players
 					for(int p = 0; p < minimum(Info.m_NumClients, (int)MAX_CLIENTS); p++)
 					{
-						if(MatchesFn(Info.m_aClients[p].m_aName, aFilterStr) ||
-							MatchesFn(Info.m_aClients[p].m_aClan, aFilterStr))
+						if(MatchesFn(Info.m_aClients[p].m_aName, aFilterStrTrimmed) ||
+							MatchesFn(Info.m_aClients[p].m_aClan, aFilterStrTrimmed))
 						{
 							if(g_Config.m_BrFilterConnectingPlayers &&
 								str_comp(Info.m_aClients[p].m_aName, "(connecting)") == 0 &&
@@ -522,7 +523,7 @@ void CServerBrowser::Filter()
 					}
 
 					// match against map
-					if(MatchesFn(Info.m_aMap, aFilterStr))
+					if(MatchesFn(Info.m_aMap, aFilterStrTrimmed))
 					{
 						Info.m_QuickSearchHit |= IServerBrowser::QUICK_MAPNAME;
 					}
@@ -536,36 +537,40 @@ void CServerBrowser::Filter()
 			{
 				const char *pStr = g_Config.m_BrExcludeString;
 				char aExcludeStr[sizeof(g_Config.m_BrExcludeString)];
+				char aExcludeStrTrimmed[sizeof(g_Config.m_BrExcludeString)];
 				while((pStr = str_next_token(pStr, IServerBrowser::SEARCH_EXCLUDE_TOKEN, aExcludeStr, sizeof(aExcludeStr))))
 				{
-					if(aExcludeStr[0] == '\0')
+					str_copy(aExcludeStrTrimmed, str_utf8_skip_whitespaces(aExcludeStr));
+					str_utf8_trim_right(aExcludeStrTrimmed);
+
+					if(aExcludeStrTrimmed[0] == '\0')
 					{
 						continue;
 					}
 					auto MatchesFn = matchesPart;
-					const int FilterLen = str_length(aExcludeStr);
-					if(aExcludeStr[0] == '"' && aExcludeStr[FilterLen - 1] == '"')
+					const int FilterLen = str_length(aExcludeStrTrimmed);
+					if(aExcludeStrTrimmed[0] == '"' && aExcludeStrTrimmed[FilterLen - 1] == '"')
 					{
-						aExcludeStr[FilterLen - 1] = '\0';
+						aExcludeStrTrimmed[FilterLen - 1] = '\0';
 						MatchesFn = matchesExactly;
 					}
 
 					// match against server name
-					if(MatchesFn(Info.m_aName, aExcludeStr))
+					if(MatchesFn(Info.m_aName, aExcludeStrTrimmed))
 					{
 						Filtered = true;
 						break;
 					}
 
 					// match against map
-					if(MatchesFn(Info.m_aMap, aExcludeStr))
+					if(MatchesFn(Info.m_aMap, aExcludeStrTrimmed))
 					{
 						Filtered = true;
 						break;
 					}
 
 					// match against gametype
-					if(MatchesFn(Info.m_aGameType, aExcludeStr))
+					if(MatchesFn(Info.m_aGameType, aExcludeStrTrimmed))
 					{
 						Filtered = true;
 						break;
@@ -696,7 +701,22 @@ void ServerBrowserFormatAddresses(char *pBuffer, int BufferSize, NETADDR *pAddrs
 		{
 			return;
 		}
-		net_addr_str(&pAddrs[i], pBuffer, BufferSize, true);
+		char aIpAddr[512];
+		if(!net_addr_str(&pAddrs[i], aIpAddr, sizeof(aIpAddr), true))
+		{
+			str_copy(pBuffer, aIpAddr, BufferSize);
+			return;
+		}
+		if(pAddrs[i].type & NETTYPE_TW7)
+		{
+			str_format(
+				pBuffer,
+				BufferSize,
+				"tw-0.7+udp://%s",
+				aIpAddr);
+			return;
+		}
+		str_copy(pBuffer, aIpAddr, BufferSize);
 		int Length = str_length(pBuffer);
 		pBuffer += Length;
 		BufferSize -= Length;
@@ -719,7 +739,7 @@ void CServerBrowser::SetInfo(CServerEntry *pEntry, const CServerInfo &Info) cons
 
 	if(pEntry->m_Info.m_ClientScoreKind == CServerInfo::CLIENT_SCORE_KIND_UNSPECIFIED)
 	{
-		if((str_find_nocase(pEntry->m_Info.m_aGameType, "race") || str_find_nocase(pEntry->m_Info.m_aGameType, "fastcap")) && g_Config.m_ClDDRaceScoreBoard)
+		if(str_find_nocase(pEntry->m_Info.m_aGameType, "race") || str_find_nocase(pEntry->m_Info.m_aGameType, "fastcap"))
 		{
 			pEntry->m_Info.m_ClientScoreKind = CServerInfo::CLIENT_SCORE_KIND_TIME_BACKCOMPAT;
 		}
@@ -731,11 +751,11 @@ void CServerBrowser::SetInfo(CServerEntry *pEntry, const CServerInfo &Info) cons
 
 	class CPlayerScoreNameLess
 	{
-		const int ScoreKind;
+		const int m_ScoreKind;
 
 	public:
 		CPlayerScoreNameLess(int ClientScoreKind) :
-			ScoreKind(ClientScoreKind)
+			m_ScoreKind(ClientScoreKind)
 		{
 		}
 
@@ -750,7 +770,7 @@ void CServerBrowser::SetInfo(CServerEntry *pEntry, const CServerInfo &Info) cons
 			int Score0 = p0.m_Score;
 			int Score1 = p1.m_Score;
 
-			if(ScoreKind == CServerInfo::CLIENT_SCORE_KIND_TIME || ScoreKind == CServerInfo::CLIENT_SCORE_KIND_TIME_BACKCOMPAT)
+			if(m_ScoreKind == CServerInfo::CLIENT_SCORE_KIND_TIME || m_ScoreKind == CServerInfo::CLIENT_SCORE_KIND_TIME_BACKCOMPAT)
 			{
 				// Sort unfinished (-9999) and still connecting players (-1) after others
 				if(Score0 < 0 && Score1 >= 0)
@@ -762,7 +782,7 @@ void CServerBrowser::SetInfo(CServerEntry *pEntry, const CServerInfo &Info) cons
 			if(Score0 != Score1)
 			{
 				// Handle the sign change introduced with CLIENT_SCORE_KIND_TIME
-				if(ScoreKind == CServerInfo::CLIENT_SCORE_KIND_TIME)
+				if(m_ScoreKind == CServerInfo::CLIENT_SCORE_KIND_TIME)
 					return Score0 < Score1;
 				else
 					return Score0 > Score1;
@@ -965,9 +985,9 @@ void CServerBrowser::Refresh(int Type, bool Force)
 
 		m_BroadcastTime = time_get();
 
-		for(int i = 8303; i <= 8310; i++)
+		for(int Port = LAN_PORT_BEGIN; Port <= LAN_PORT_END; Port++)
 		{
-			Packet.m_Address.port = i;
+			Packet.m_Address.port = Port;
 			m_pNetClient->Send(&Packet);
 		}
 
@@ -1072,7 +1092,6 @@ void CServerBrowser::UpdateFromHttp()
 	}
 
 	int NumServers = m_pHttp->NumServers();
-	int NumLegacyServers = m_pHttp->NumLegacyServers();
 	std::function<bool(const NETADDR *, int)> Want = [](const NETADDR *pAddrs, int NumAddrs) { return true; };
 	if(m_ServerlistType == IServerBrowser::TYPE_FAVORITES)
 	{
@@ -1131,16 +1150,6 @@ void CServerBrowser::UpdateFromHttp()
 		pEntry->m_RequestIgnoreInfo = true;
 	}
 
-	for(int i = 0; i < NumLegacyServers; i++)
-	{
-		NETADDR Addr = m_pHttp->LegacyServer(i);
-		if(!Want(&Addr, 1))
-		{
-			continue;
-		}
-		QueueRequest(Add(&Addr, 1));
-	}
-
 	if(m_ServerlistType == IServerBrowser::TYPE_FAVORITES)
 	{
 		const IFavorites::CEntry *pFavorites;
@@ -1163,7 +1172,7 @@ void CServerBrowser::UpdateFromHttp()
 			}
 			// (Also add favorites we're not allowed to ping.)
 			CServerEntry *pEntry = Add(pFavorites[i].m_aAddrs, pFavorites[i].m_NumAddrs);
-			if(pFavorites->m_AllowPing)
+			if(pFavorites[i].m_AllowPing)
 			{
 				QueueRequest(pEntry);
 			}
@@ -1456,15 +1465,21 @@ void CServerBrowser::LoadDDNetServers()
 		const json_value &IconUrl = Icon["url"];
 		const json_value &Name = Community["name"];
 		const json_value HasFinishes = Community["has_finishes"];
-		const json_value *pFinishes = &Icon["finishes"];
+		const json_value *pFinishes = &Community["finishes"];
 		const json_value *pServers = &Community["servers"];
-		// We accidentally set servers to be part of icon, so support that as a
-		// fallback for now. Can be removed in a few versions when the
-		// communities.json has been updated.
+		// We accidentally set finishes/servers to be part of icon in
+		// the past, so support that, too. Can be removed once we make
+		// a breaking change to the whole thing, necessitating a new
+		// endpoint.
+		if(pFinishes->type == json_none)
+		{
+			pServers = &Icon["finishes"];
+		}
 		if(pServers->type == json_none)
 		{
 			pServers = &Icon["servers"];
 		}
+		// Backward compatibility.
 		if(pFinishes->type == json_none)
 		{
 			if(str_comp(Id, COMMUNITY_DDNET) == 0)
@@ -1472,7 +1487,6 @@ void CServerBrowser::LoadDDNetServers()
 				pFinishes = &(*m_pDDNetInfo)["maps"];
 			}
 		}
-		// Backward compatibility.
 		if(pServers->type == json_none)
 		{
 			if(str_comp(Id, COMMUNITY_DDNET) == 0)
@@ -2281,16 +2295,6 @@ bool CServerBrowser::IsRegistered(const NETADDR &Addr)
 			}
 		}
 	}
-
-	const int NumLegacyServers = m_pHttp->NumLegacyServers();
-	for(int i = 0; i < NumLegacyServers; i++)
-	{
-		if(net_addr_comp(&m_pHttp->LegacyServer(i), &Addr) == 0)
-		{
-			return true;
-		}
-	}
-
 	return false;
 }
 
@@ -2335,17 +2339,4 @@ bool CServerInfo::ParseLocation(int *pResult, const char *pString)
 		}
 	}
 	return true;
-}
-
-void CServerInfo::InfoToString(char *pBuffer, int BufferSize) const
-{
-	str_format(
-		pBuffer,
-		BufferSize,
-		"%s\n"
-		"Address: ddnet://%s\n"
-		"My IGN: %s\n",
-		m_aName,
-		m_aAddress,
-		g_Config.m_PlayerName);
 }

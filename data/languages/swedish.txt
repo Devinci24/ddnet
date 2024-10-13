@@ -7,7 +7,7 @@
 #	3edcxzaq1		2020-06-25 00:00:00
 #	cur.ie			2020-09-28 00:00:00
 #	simpygirl		2022-02-20 00:00:00
-#	furo			2024-03-02 00:00:00
+#	furo			2024-09-29 00:00:00
 ##### /authors #####
 
 ##### translated strings #####
@@ -81,8 +81,8 @@ Client
 Connecting to
 == Ansluter till
 
-Connection Problems...
-== Anslutningsproblem...
+Connection Problems…
+== Anslutningsproblem…
 
 Console
 == Konsol
@@ -281,9 +281,6 @@ Player
 
 Player country:
 == Land
-
-Player options
-== Spelaralternativ
 
 Players
 == Spelare
@@ -501,9 +498,6 @@ Your skin
 Reset to defaults
 == Nollställ till standard
 
-Round
-== Runda
-
 Lht.
 == Ljusstyrka
 
@@ -687,8 +681,8 @@ Max CSVs
 Zoom in
 == Zooma in
 
-Update failed! Check log...
-== Updatering misslyckades! Kolla logg...
+Update failed! Check log…
+== Updatering misslyckades! Kolla logg…
 
 %d new mentions
 == %d nya nämningar
@@ -846,8 +840,8 @@ AntiPing: predict grenade paths
 Best
 == Bäst
 
-Updating...
-== Uppdaterar...
+Updating…
+== Uppdaterar…
 
 Clan plates size
 == Klanskylt storlek
@@ -866,9 +860,6 @@ DDNet %s is out!
 
 Highlighted message
 == Betona meddelande
-
-Use DDRace Scoreboard
-== Använd DDRace poänglista
 
 AntiPing: predict weapons
 == AntiPing: predicera vapen
@@ -905,9 +896,6 @@ Show HUD
 
 Pause
 == Pausa
-
-Reload
-== Ladda om
 
 Spree
 == Spree
@@ -1240,8 +1228,8 @@ Team %d
 Uploading map data to GPU
 == Laddar upp bana data till grafikkortet
 
-Trying to determine UDP connectivity...
-== Försöker att bestämma UDP anslutning...
+Trying to determine UDP connectivity…
+== Försöker att bestämma UDP anslutning…
 
 UDP seems to be filtered.
 == UDP verkar vara filtrerad.
@@ -1522,9 +1510,6 @@ Show health, shields and ammo
 DDRace HUD
 == DDRace HUD
 
-Show client IDs in scoreboard
-== Visa klient ID i poänglista
-
 Show DDRace HUD
 == Visa DDRace HUD
 
@@ -1548,9 +1533,6 @@ Show freeze bars
 
 Opacity of freeze bars inside freeze
 == Opacitet av freeze bars i freeze
-
-Show hook strength indicator
-== Visa hook styrka indikator
 
 Hook collision line
 == Hook kollisions linje
@@ -1821,3 +1803,142 @@ Friends
 
 Loading…
 == Laddar…
+
+Loading demo file from storage
+== Laddar demo fil från lagring
+
+No login required
+== Ingen inloggning krävs
+
+Player info change cooldown
+== Spelarinfo ändring cooldown
+
+Always show chat
+== Visa alltid chatt
+
+Show friend mark (♥) in name plates
+== Visa kompis markering (♥) i namnskyltar
+
+Show hook strength icon indicator
+== Visa hook styrka med en ikon
+
+Show hook strength number indicator
+== Visa hook styrka med ett nummer 
+
+Show own player's hook collision line
+== Visa din egen hook kollisions linje
+
+Always show own player's hook collision line
+== Visa alltid din egna hook kollisions linje
+
+Always show other players' hook collision lines
+== Visa alltid andra spelares hook kollisions linjer
+
+%d/%d KiB (%.1f KiB/s)
+== %d/%d KiB (%.1f KiB/s)
+
+Tee
+== Tee
+
+Show only chat messages from team members
+== Visa bara chattmeddelanden från lagkamrater
+
+[Spectating]
+Following %s
+== Följer %s
+
+Example of usage
+== Exempel på användning
+
+Round %d/%d
+== Runda %d/%d
+
+[Spectators]
+%d others…
+== %d andra…
+
+[Team and size]
+%d\n(%d/%d)
+== %d\n(%d/%d)
+
+Team %d (%d/%d)
+== Lag %d (%d/%d)
+
+https://wiki.ddnet.org/wiki/Mapping
+== https://wiki.ddnet.org/wiki/Mapping
+
+Could not resolve connect address '%s'. See local console for details.
+== Kunde inte förstå anslutnings adress '%s'. Se den lokala konsolen för detaljer.
+
+Connect address error
+== Anslutnings problem
+
+Could not connect dummy
+== Kunde inte ansluta dummy
+
+Dummy is not allowed on this server
+== Dummy är inte tillåten på denna server
+
+Please wait…
+== Vänligen vänta…
+
+Show client IDs (scoreboard, chat, spectator)
+== Visa klient IDen (poänglistan, chatt, åskadarmeny)
+
+Are you sure that you want to delete '%s'?
+== Är du säker att du vill ta bort '%s'?
+
+Delete skin
+== Ta bort skin
+
+Basic
+== Enkel
+
+Custom
+== Anpassa
+
+Unable to delete skin
+== Kunde inte ta bort skin
+
+Save skin
+== Spara skin
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
+== Är du säker på att du vill spara ditt skin? Om detta skin finns redan, så kommer den att ersättas.
+
+Unable to save the skin
+== Misslyckades att spara skin
+
+Unable to save the skin with a reserved name
+== Misslyckades med att spara skin med reserverat namn
+
+No local servers found (ports %d-%d)
+== Inga lokala servrar hittades (portar %d-%d)
+
+[Hertz]
+Hz
+== Hz
+
+[skins]
+Body
+== Kropp
+
+[skins]
+Marking
+== Märkning
+
+[skins]
+Decoration
+== Dekoration
+
+[skins]
+Hands
+== Händer
+
+[skins]
+Feet
+== Fötter
+
+[skins]
+Eyes
+== Ögon

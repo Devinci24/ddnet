@@ -31,6 +31,11 @@
 # Rafael Fontenelle   2023-09-25 14:23:00
 # Rafael Fontenelle   2023-12-05 17:01:00
 # Rafael Fontenelle   2024-03-02 16:20:00
+# Rafael Fontenelle   2024-04-30 14:52:00
+# Rafael Fontenelle   2024-06-11 22:43:00
+# Rafael Fontenelle   2024-07-17 12:04:00
+# Rafael Fontenelle   2024-09-02 16:02:00
+# Rafael Fontenelle   2024-09-30 07:53:00
 ##### /authors #####
 
 ##### translated strings #####
@@ -104,8 +109,8 @@ Client
 Connecting to
 == Conectando a
 
-Connection Problems...
-== Problemas de conexão...
+Connection Problems…
+== Problemas de conexão…
 
 Console
 == Console
@@ -307,9 +312,6 @@ Player
 
 Player country:
 == País do jogador:
-
-Player options
-== Opções do jogador
 
 Players
 == Jogadores
@@ -593,9 +595,6 @@ Gameplay
 Restart
 == Reiniciar
 
-Round
-== Turno
-
 Browser
 == Navegar
 
@@ -662,8 +661,8 @@ DDNet %s is available:
 News
 == Novidades
 
-Updating...
-== Atualizando...
+Updating…
+== Atualizando…
 
 Overlay entities
 == Sobrepor entidades
@@ -685,9 +684,6 @@ New random timeout code
 
 Suicides
 == Suicídios
-
-Use DDRace Scoreboard
-== Usar o placar do DDRace
 
 Record demo
 == Gravar demo
@@ -821,14 +817,11 @@ Show DDNet map finishes in server browser
 transmits your player name to info.ddnet.org
 == transmite seu nome de jogador para info.ddnet.org
 
-Reload
-== Recarregar
-
 Time
 == Tempo
 
-Update failed! Check log...
-== Atualização falhou! Verifique o log...
+Update failed! Check log…
+== Atualização falhou! Verifique o log…
 
 1 new mention
 == 1 nova menção
@@ -1236,8 +1229,8 @@ Speed:
 Angle:
 == Ângulo:
 
-Trying to determine UDP connectivity...
-== Tentando determinar conectividade UDP...
+Trying to determine UDP connectivity…
+== Tentando determinar conectividade UDP…
 
 UDP seems to be filtered.
 == UDP parece estar filtrado.
@@ -1379,17 +1372,11 @@ Show health, shields and ammo
 DDRace HUD
 == HUD do DDRace
 
-Show client IDs in scoreboard
-== Mostrar IDs de cliente no placar
-
 Show DDRace HUD
 == Mostrar HUD do DDRace
 
 Show jumps indicator
 == Mostrar indicador de pulos
-
-Show hook strength indicator
-== Mostrar indicador de força do gancho
 
 Hook collision line
 == Linha de colisão do gancho
@@ -1689,7 +1676,7 @@ Go back the specified duration
 
 [Demo player duration]
 %d sec.
-== $d seg.
+== %d seg.
 
 Change the skip duration
 == Alterar a duração de pulo
@@ -1844,3 +1831,142 @@ Friends
 
 Loading…
 == Carregando…
+
+Loading demo file from storage
+== Carregando arquivo de demo do armazenamento
+
+No login required
+== Nenhum login exigido
+
+Player info change cooldown
+== Tempo de resfriamento para alterações de informações de jogador
+
+Always show chat
+== Sempre mostrar o chat
+
+Show friend mark (♥) in name plates
+== Mostrar marca de amigo (♥) em apelidos
+
+Show hook strength icon indicator
+== Mostrar indicador de ícone de força do gancho
+
+Show hook strength number indicator
+== Mostrar indicador de número da força do gancho
+
+Show own player's hook collision line
+== Mostrar a linha de colisão do gancho do próprio jogador
+
+Always show own player's hook collision line
+== Sempre mostrar a linha de colisão do gancho do próprio jogador
+
+Always show other players' hook collision lines
+== Sempre mostrar linhas de colisão do gancho dos outros jogadores
+
+%d/%d KiB (%.1f KiB/s)
+== %d/%d KiB (%.1f KiB/s)
+
+Tee
+== Tee
+
+Show only chat messages from team members
+== Mostrar apenas mensagens de chat de membros do time
+
+[Spectating]
+Following %s
+== Seguindo %s
+
+Example of usage
+== Exemplo de uso
+
+Round %d/%d
+== Rodada %d/%d
+
+[Spectators]
+%d others…
+== %d outros…
+
+[Team and size]
+%d\n(%d/%d)
+== %d\n(%d/%d)
+
+Team %d (%d/%d)
+== Time %d (%d/%d)
+
+https://wiki.ddnet.org/wiki/Mapping
+== https://wiki.ddnet.org/wiki/Mapping
+
+Could not resolve connect address '%s'. See local console for details.
+== Não foi possível resolver o endereço de conexão '%s'. Veja o console local para detalhes.
+
+Connect address error
+== Erro no endereço de conexão
+
+Could not connect dummy
+== Não foi possível conectar o dummy
+
+Dummy is not allowed on this server
+== Dummy não é permitido neste servidor
+
+Please wait…
+== Por favor, aguarde…
+
+Show client IDs (scoreboard, chat, spectator)
+== Mostrar IDs de clientes (placar, chat, observador)
+
+Are you sure that you want to delete '%s'?
+== Tem certeza que deseja excluir '%s'?
+
+Delete skin
+== Excluir skin
+
+Basic
+== Básico
+
+Custom
+== Personalizado
+
+Unable to delete skin
+== Não foi possível excluir skin
+
+Save skin
+== Salvar skin
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
+== Tem certeza de que deseja salvar sua skin? Se uma skin com esse nome já existir, ela será substituída.
+
+Unable to save the skin
+== Não foi possível salvar a skin
+
+Unable to save the skin with a reserved name
+== Não foi possível salvar a skin com um nome reservado
+
+No local servers found (ports %d-%d)
+== Nenhum servidor local encontrado (portas %d-%d)
+
+[Hertz]
+Hz
+== Hz
+
+[skins]
+Body
+== Corpo
+
+[skins]
+Marking
+== Marca
+
+[skins]
+Decoration
+== Decoração
+
+[skins]
+Hands
+== Mãos
+
+[skins]
+Feet
+== Pés
+
+[skins]
+Eyes
+== Olhos
