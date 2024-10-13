@@ -3,8 +3,6 @@
 
 #include <game/server/gamecontroller.h>
 #include <vector>
-#include <iterator>
-#include <algorithm>
 
 class CGameControllerCup : public IGameController
 {
@@ -30,23 +28,23 @@ private:
 	std::vector<m_sPlayersInfo> m_PlayerLeaderboard;
 
 	//start
-	void m_fnSendtWarmupMsg();
-	void m_PrepareRound();
-	void m_fnPausePlayersTune();
+	void SendtWarmupMsg();
+	void PrepareRound();
+	void PausePlayersTune();
 	void StartRound() override; //do I really want to override?
 
 	//end
 	void EndRound() override; //do I really want to override?
-	void m_RemoveEliminatedPlayers();
+	void RemoveEliminatedPlayers();
 
 	//Rounds
-	void m_SetSplits(CPlayer *pThisPlayer, int TimeCheckpoint);
-	void m_CupOnPlayerFinish(int ClientId);
-	void m_CleanUp();
+	void SetSplits(CPlayer *pThisPlayer, int TimeCheckpoint);
+	void CupOnPlayerFinish(int ClientId);
+	void CleanUp();
 
 	//utils
-	std::vector<m_sPlayersInfo>::iterator m_GetPlayerByName(const char* PlayerName);
-	static bool m_SplitsComparator(const m_sPlayersInfo& player1, m_sPlayersInfo& player2);
+	std::vector<m_sPlayersInfo>::iterator GetPlayerByName(const char* PlayerName);
+	static bool SplitsComparator(const m_sPlayersInfo& player1, m_sPlayersInfo& player2);
 
 	//overrides
 	//bool CanJoinTeam(int Team, int NotThisId, char *pErrorReason, int ErrorReasonSize) override;

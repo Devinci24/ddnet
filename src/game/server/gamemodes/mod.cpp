@@ -44,7 +44,7 @@ int CGameControllerCup::GetState() const
 	return m_CupState;
 }
 
-void CGameControllerCup::m_fnPausePlayersTune()
+void CGameControllerCup::PausePlayersTune()
 {
 	GameServer()->Tuning()->Set("hook_drag_speed", 0);
 	GameServer()->Tuning()->Set("ground_control_speed", 0);
@@ -56,7 +56,7 @@ void CGameControllerCup::m_fnPausePlayersTune()
 	GameServer()->SendTuningParams(-1);
 }
 
-void CGameControllerCup::m_PrepareRound()
+void CGameControllerCup::PrepareRound()
 {
 	//if only 1 or no one has qualified.
 	if (m_PlayerLeaderboard.size() <= 1)
@@ -65,12 +65,12 @@ void CGameControllerCup::m_PrepareRound()
 	{
 		m_CupState = STATE_WARMUP_ROUND;
 		
-		m_CleanUp();
+		CleanUp();
 		DoWarmup(COUNTDOWN);
-		m_fnPausePlayersTune();
+		PausePlayersTune();
 
 		//reset stats
-		for (auto playerInfo : m_PlayerLeaderboard)
+		for (auto &playerInfo : m_PlayerLeaderboard)
 		{
 			playerInfo.m_AmountOfTimeCPs = 0;
 			playerInfo.m_CurrentTimeCP = -1;
@@ -94,7 +94,7 @@ void CGameControllerCup::StartCup(int WarmupTime)
 	m_CupState = STATE_WARMUP;
 	m_RoundStartTick = 0;
 
-	m_CleanUp();
+	CleanUp();
 	GameServer()->ResetTuning();
 
 	if (WarmupTime)
@@ -109,7 +109,7 @@ void CGameControllerCup::StartCup(int WarmupTime)
 	GameServer()->SendBroadcast(aBuf, -1);
 }
 
-void CGameControllerCup::m_fnSendtWarmupMsg()
+void CGameControllerCup::SendtWarmupMsg()
 {
 	if (!(m_Warmup == 60 * SERVER_TICK_SPEED
 		|| m_Warmup == 30 * SERVER_TICK_SPEED
@@ -134,9 +134,9 @@ void CGameControllerCup::Tick()
 
 	//warmup
 	if (m_CupState == STATE_WARMUP && m_Warmup)
-		m_fnSendtWarmupMsg();
+		SendtWarmupMsg();
 	else if (m_CupState == STATE_WARMUP && !m_Warmup)
-		m_PrepareRound();
+		PrepareRound();
 	else if (m_CupState == STATE_WARMUP_ROUND && !m_Warmup)
 		StartRound();
 	else if (m_CupState == STATE_ROUND && !m_Warmup)
@@ -179,7 +179,7 @@ void CGameControllerCup::OnPlayerConnect(CPlayer *pPlayer)
 
 	if (m_CupState == STATE_ROUND)
 	{
-		auto PlayerInfo = m_GetPlayerByName(Server()->ClientName(ClientId));
+		auto PlayerInfo = GetPlayerByName(Server()->ClientName(ClientId));
 		if (PlayerInfo == m_PlayerLeaderboard.end())
 		{
 			GameServer()->SendChatTarget(ClientId, "Cup has already started :c. You will be able to play once it ends");
@@ -212,17 +212,17 @@ void CGameControllerCup::OnPlayerConnect(CPlayer *pPlayer)
 // 	}	
 // }
 
-void CGameControllerCup::m_RemoveEliminatedPlayers()
+void CGameControllerCup::RemoveEliminatedPlayers()
 {
 	if (m_PlayerLeaderboard.size() == 1)
 		return ;
 
-	std::sort(m_PlayerLeaderboard.begin(), m_PlayerLeaderboard.end(), m_SplitsComparator);
+	std::sort(m_PlayerLeaderboard.begin(), m_PlayerLeaderboard.end(), SplitsComparator);
 
 	int size = m_PlayerLeaderboard.size();
 
 	char aBuf[256];
-	for (int i = 0; i < size/4 ; i++)
+	for (int i = 0; i < (size/4) + 1 ; i++)
 	{
 		str_format(aBuf, sizeof(aBuf), "%s has been eliminated\n", m_PlayerLeaderboard.back().m_PlayerName.c_str());
 		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
@@ -231,13 +231,13 @@ void CGameControllerCup::m_RemoveEliminatedPlayers()
 }
 
 //needs a better name
-void CGameControllerCup::m_CleanUp()
+void CGameControllerCup::CleanUp()
 {
 	for(int ClientId = 0; ClientId < Server()->MaxClients(); ClientId++)
 	{
 		if(Server()->ClientIngame(ClientId))
 		{
-			auto playerInfo = m_GetPlayerByName(Server()->ClientName(ClientId));
+			auto playerInfo = GetPlayerByName(Server()->ClientName(ClientId));
 			CPlayer *pPlayer = Teams().GetPlayer(ClientId);
 			//this should never proc I think
 			if (!pPlayer)
@@ -246,17 +246,17 @@ void CGameControllerCup::m_CleanUp()
 			//put player into spec or not when in rounds.
 			if (m_CupState == STATE_WARMUP_ROUND) // (|| STATE_ROUND ) for convenience?
 			{
-				if (playerInfo == m_PlayerLeaderboard.end() && pPlayer->GetTeam() != ELIMINATED_TEAM)
+				if (playerInfo == m_PlayerLeaderboard.end() && pPlayer->GetTeam() != ELIMINATED_TEAM) //CRASH HERE AT SECOND ROUND
 					pPlayer->SetTeam(ELIMINATED_TEAM);
-				else if (playerInfo != m_PlayerLeaderboard.end() && pPlayer->GetTeam() == ELIMINATED_TEAM) //CRASH HERE AT SECOND ROUND
-				 	pPlayer->SetTeam(ClientId, TEAM_FLOCK);
+				else if (playerInfo != m_PlayerLeaderboard.end() && pPlayer->GetTeam() == ELIMINATED_TEAM)
+				 	pPlayer->SetTeam(TEAM_FLOCK);
 			}
 
 			//Put Player into any playable team once cup ends.
 			if (m_CupState == STATE_NONE)
 			{
 				if (pPlayer->GetTeam() == ELIMINATED_TEAM)
-					pPlayer->SetTeam(ClientId, TEAM_FLOCK);
+					pPlayer->SetTeam(TEAM_FLOCK);
 			}
 
 			//set score back if end Otherwise remove score
@@ -272,7 +272,7 @@ void CGameControllerCup::m_CleanUp()
 
 void CGameControllerCup::EndRound()
 {
-	m_RemoveEliminatedPlayers();
+	RemoveEliminatedPlayers();
 
 	if (m_PlayerLeaderboard.size() <= 1)
 	{
@@ -289,13 +289,13 @@ void CGameControllerCup::EndRound()
 			GameServer()->SendBroadcast(aBuf, -1);
 		}
 
-		m_CleanUp();
+		CleanUp();
 	}
 	else
-		m_PrepareRound();
+		PrepareRound();
 }
 
-auto CGameControllerCup::m_GetPlayerByName(const char* PlayerName)
+auto CGameControllerCup::GetPlayerByName(const char* PlayerName)
     -> decltype(m_PlayerLeaderboard.begin())
 {
 	return std::find_if(m_PlayerLeaderboard.begin(), m_PlayerLeaderboard.end(),
@@ -304,7 +304,7 @@ auto CGameControllerCup::m_GetPlayerByName(const char* PlayerName)
 					});
 }
 
-bool CGameControllerCup::m_SplitsComparator(const m_sPlayersInfo& player1, m_sPlayersInfo& player2) {
+bool CGameControllerCup::SplitsComparator(const m_sPlayersInfo& player1, m_sPlayersInfo& player2) {
 
     if (player1.m_HasFinished != player2.m_HasFinished)
         return player1.m_HasFinished;
@@ -315,30 +315,30 @@ bool CGameControllerCup::m_SplitsComparator(const m_sPlayersInfo& player1, m_sPl
     return player1.m_AmountOfTimeCPs > player2.m_AmountOfTimeCPs;
 }
 
-void CGameControllerCup::m_SetSplits(CPlayer *pThisPlayer, int TimeCheckpoint)
+void CGameControllerCup::SetSplits(CPlayer *pThisPlayer, int TimeCheckpoint)
 {
 	const char *PlayerName = Server()->ClientName(pThisPlayer->GetCid());
 	CCharacter *pChr = pThisPlayer->GetCharacter();
 	if (!pChr) //probably useless check, but who knows
 		return ;
 
-	auto PlayerNameIt = m_GetPlayerByName(PlayerName);
+	auto PlayerNameIt = GetPlayerByName(PlayerName);
 
 	if(TimeCheckpoint > -1 && pChr->m_DDRaceState == DDRACE_STARTED && pChr->m_aCurrentTimeCp[TimeCheckpoint] == 0.0f) //&& pChr->m_Time != 0.0f) useless?
 	{
 		PlayerNameIt->m_CurrentTimeCP = TimeCheckpoint;
 		PlayerNameIt->m_AmountOfTimeCPs++;
 
-		std::sort(m_PlayerLeaderboard.begin(), m_PlayerLeaderboard.end(), m_SplitsComparator);
+		std::sort(m_PlayerLeaderboard.begin(), m_PlayerLeaderboard.end(), SplitsComparator);
 	}
 }
 
-void CGameControllerCup::m_CupOnPlayerFinish(int ClientId)
+void CGameControllerCup::CupOnPlayerFinish(int ClientId)
 {
 	//TODO add team support.
 
 	const char* PlayerName = Server()->ClientName(ClientId);
-	auto player = m_GetPlayerByName(PlayerName);
+	auto player = GetPlayerByName(PlayerName);
 
 	if (m_CupState == STATE_WARMUP && player == m_PlayerLeaderboard.end())
 		m_PlayerLeaderboard.emplace_back(m_sPlayersInfo{
@@ -359,7 +359,7 @@ void CGameControllerCup::m_CupOnPlayerFinish(int ClientId)
 			DoWarmup(END_ROUND_TIMER);
 
 		player->m_HasFinished = true;
-		std::sort(m_PlayerLeaderboard.begin(), m_PlayerLeaderboard.end(), m_SplitsComparator);
+		std::sort(m_PlayerLeaderboard.begin(), m_PlayerLeaderboard.end(), SplitsComparator);
 
 		for (auto &Player : m_PlayerLeaderboard)
 		{
@@ -456,7 +456,7 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 	if(((m_TileIndex == TILE_FINISH) || (m_TileFIndex == TILE_FINISH) || FTile1 == TILE_FINISH || FTile2 == TILE_FINISH || FTile3 == TILE_FINISH || FTile4 == TILE_FINISH || Tile1 == TILE_FINISH || Tile2 == TILE_FINISH || Tile3 == TILE_FINISH || Tile4 == TILE_FINISH) && PlayerDDRaceState == DDRACE_STARTED)
 	{
 		Teams().OnCharacterFinish(ClientId);
-		m_CupOnPlayerFinish(ClientId);
+		CupOnPlayerFinish(ClientId);
 	}
 
 	// unlock team
@@ -481,8 +481,8 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 	//splits
 	if (m_CupState == STATE_ROUND)
 	{
-		m_SetSplits(pPlayer, GameServer()->Collision()->IsTimeCheckpoint(MapIndex));
-		m_SetSplits(pPlayer, GameServer()->Collision()->IsFTimeCheckpoint(MapIndex)); //why do I need this?
+		SetSplits(pPlayer, GameServer()->Collision()->IsTimeCheckpoint(MapIndex));
+		SetSplits(pPlayer, GameServer()->Collision()->IsFTimeCheckpoint(MapIndex)); //why do I need this?
 	}
 }
 
