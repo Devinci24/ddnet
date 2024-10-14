@@ -287,7 +287,7 @@ void CGameControllerCup::EndRound()
 			GameServer()->SendBroadcast(aBuf, -1);
 		}
 		else {
-			str_format(aBuf, sizeof(aBuf), "No one managed to qualify O.o");
+			str_copy(aBuf, "No one managed to qualify O.o");
 			GameServer()->SendBroadcast(aBuf, -1);
 		}
 
