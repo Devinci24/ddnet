@@ -1,6 +1,8 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "character.h"
+#include "base/system.h"
+#include "game/server/gamemodes/mod.h"
 #include "laser.h"
 #include "pickup.h"
 #include "projectile.h"
@@ -19,6 +21,7 @@
 #include <game/server/player.h>
 #include <game/server/score.h>
 #include <game/server/teams.h>
+#include <iterator>
 
 MACRO_ALLOC_POOL_ID_IMPL(CCharacter, MAX_CLIENTS)
 
@@ -1353,8 +1356,7 @@ void CCharacter::HandleBroadcast()
 
 	if(m_DDRaceState == DDRACE_STARTED && m_pPlayer->GetClientVersion() == VERSION_VANILLA &&
 		m_LastTimeCpBroadcasted != m_LastTimeCp && m_LastTimeCp > -1 &&
-		m_TimeCpBroadcastEndTick > Server()->Tick() && pData->m_BestTime && pData->m_aBestTimeCp[m_LastTimeCp] != 0 &&
-		GameServer()->m_pController->GetState() == 3) // <- //my changes
+		m_TimeCpBroadcastEndTick > Server()->Tick() && pData->m_BestTime && pData->m_aBestTimeCp[m_LastTimeCp] != 0)
 	{
 		char aBroadcast[128];
 		float Diff = m_aCurrentTimeCp[m_LastTimeCp] - pData->m_aBestTimeCp[m_LastTimeCp];
@@ -1484,6 +1486,23 @@ void CCharacter::SetTimeCheckpoint(int TimeCheckpoint)
 				Msg.m_Finish = 0;
 				float Diff = (m_aCurrentTimeCp[m_LastTimeCp] - pData->m_aBestTimeCp[m_LastTimeCp]) * 100;
 				Msg.m_Check = (int)Diff;
+
+				//my changes
+				CGameControllerCup *Cup = dynamic_cast<CGameControllerCup*>(GameServer()->m_pController);
+				if (Cup && Cup->GetState() == 3)
+				{
+					Cup->SetSplits(GetPlayer(), TimeCheckpoint);
+					auto Player = Cup->GetPlayerByName(Server()->ClientName(m_pPlayer->GetCid()));
+					if (Player == Cup->m_PlayerLeaderboard.begin())
+						Msg.m_Check = 0.0f;
+					else
+						Msg.m_Check =  (int)((Player->m_CurrentTimeCP[TimeCheckpoint] - std::prev(Player)->m_CurrentTimeCP[TimeCheckpoint]) * 100);
+					
+					for (const auto& playera : Cup->m_PlayerLeaderboard)
+						dbg_msg("LEADERBOARDPRINT", "\n\n\nname : %s\n amount of cps : %i\n timecps : %f\n has finishes : %i\n", playera.m_PlayerName.c_str(), playera.m_AmountOfTimeCPs, playera.m_CurrentTimeCP[TimeCheckpoint], playera.m_HasFinished);
+
+				}
+
 				Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, m_pPlayer->GetCid());
 			}
 		}

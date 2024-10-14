@@ -30,6 +30,7 @@
 #include <base/vmath.h>
 
 #include "gameclient.h"
+#include "engine/shared/network.h"
 #include "lineinput.h"
 #include "race.h"
 #include "render.h"
@@ -85,7 +86,7 @@ const char *CGameClient::NetVersion() const { return GAME_NETVERSION; }
 const char *CGameClient::NetVersion7() const { return GAME_NETVERSION7; }
 int CGameClient::DDNetVersion() const { return DDNET_VERSION_NUMBER; }
 const char *CGameClient::DDNetVersionStr() const { return m_aDDNetVersionStr; }
-int CGameClient::ClientVersion7() const { return CLIENT_VERSION7; }
+int CGameClient::ClientVersion7() const { return NET_VERSION; }
 const char *CGameClient::GetItemName(int Type) const { return m_NetObjHandler.GetObjName(Type); }
 
 void CGameClient::OnConsoleInit()

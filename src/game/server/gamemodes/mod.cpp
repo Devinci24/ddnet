@@ -3,6 +3,7 @@
 #include "base/system.h"
 #include "engine/server.h"
 #include "game/generated/protocol.h"
+#include "game/generated/protocol7.h"
 #include "game/server/teams.h"
 #include "game/teamscore.h"
 
@@ -72,8 +73,9 @@ void CGameControllerCup::PrepareRound()
 		//reset stats
 		for (auto &playerInfo : m_PlayerLeaderboard)
 		{
+			for (int i = 0; i < MAX_CHECKPOINTS; i++)
+				playerInfo.m_CurrentTimeCP[0] = 0.0f;
 			playerInfo.m_AmountOfTimeCPs = 0;
-			playerInfo.m_CurrentTimeCP = -1;
 			playerInfo.m_HasFinished = false;
 		}
 
@@ -123,7 +125,7 @@ void CGameControllerCup::SendtWarmupMsg()
 	int Seconds = m_Warmup / SERVER_TICK_SPEED;
 
 	str_format(aBuf, sizeof(aBuf), "%d seconds of qualifications left", Seconds);
-	GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+	GameServer()->SendChat(-1, protocol7::CHAT_ALL, aBuf);
 }
 
 void CGameControllerCup::Tick()
@@ -162,7 +164,7 @@ void CGameControllerCup::OnPlayerConnect(CPlayer *pPlayer)
 	{
 		char aBuf[512];
 		str_format(aBuf, sizeof(aBuf), "'%s' entered and joined the %s", Server()->ClientName(ClientId), GetTeamName(pPlayer->GetTeam()));
-		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf, -1, CGameContext::CHAT_SIX);
+		GameServer()->SendChat(-1, protocol7::CHAT_ALL, aBuf, -1, CGameContext::FLAG_SIX);
 
 		GameServer()->SendChatTarget(ClientId, "CupOfTheWeek. Version: " GAME_VERSION);
 	}
@@ -214,7 +216,7 @@ void CGameControllerCup::OnPlayerConnect(CPlayer *pPlayer)
 
 void CGameControllerCup::RemoveEliminatedPlayers()
 {
-	if (m_PlayerLeaderboard.size() == 1)
+	if (m_PlayerLeaderboard.size() <= 1)
 		return ;
 
 	std::sort(m_PlayerLeaderboard.begin(), m_PlayerLeaderboard.end(), SplitsComparator);
@@ -225,7 +227,7 @@ void CGameControllerCup::RemoveEliminatedPlayers()
 	for (int i = 0; i < (size/4) + 1 ; i++)
 	{
 		str_format(aBuf, sizeof(aBuf), "%s has been eliminated\n", m_PlayerLeaderboard.back().m_PlayerName.c_str());
-		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+		GameServer()->SendChat(-1, protocol7::CHAT_ALL, aBuf);
 		m_PlayerLeaderboard.pop_back();
 	}
 }
@@ -253,7 +255,7 @@ void CGameControllerCup::CleanUp()
 			}
 
 			//Put Player into any playable team once cup ends.
-			if (m_CupState == STATE_NONE)
+			if (m_CupState == STATE_NONE || m_CupState == STATE_WARMUP)
 			{
 				if (pPlayer->GetTeam() == ELIMINATED_TEAM)
 					pPlayer->SetTeam(TEAM_FLOCK);
@@ -299,12 +301,12 @@ auto CGameControllerCup::GetPlayerByName(const char* PlayerName)
     -> decltype(m_PlayerLeaderboard.begin())
 {
 	return std::find_if(m_PlayerLeaderboard.begin(), m_PlayerLeaderboard.end(),
-					[PlayerName](const m_sPlayersInfo& PlayerLeaderboard){
+					[PlayerName](const Sm_PlayersInfo& PlayerLeaderboard){
 						return !str_comp(PlayerName, PlayerLeaderboard.m_PlayerName.c_str());
 					});
 }
 
-bool CGameControllerCup::SplitsComparator(const m_sPlayersInfo& player1, m_sPlayersInfo& player2) {
+bool CGameControllerCup::SplitsComparator(const Sm_PlayersInfo& player1, Sm_PlayersInfo& player2) {
 
     if (player1.m_HasFinished != player2.m_HasFinished)
         return player1.m_HasFinished;
@@ -324,10 +326,12 @@ void CGameControllerCup::SetSplits(CPlayer *pThisPlayer, int TimeCheckpoint)
 
 	auto PlayerNameIt = GetPlayerByName(PlayerName);
 
-	if(TimeCheckpoint > -1 && pChr->m_DDRaceState == DDRACE_STARTED && pChr->m_aCurrentTimeCp[TimeCheckpoint] == 0.0f) //&& pChr->m_Time != 0.0f) useless?
+	if(TimeCheckpoint > -1 && pChr->m_DDRaceState == DDRACE_STARTED && PlayerNameIt->m_CurrentTimeCP[TimeCheckpoint] == 0.0f && pChr->GetTime() != 0.0f)
 	{
-		PlayerNameIt->m_CurrentTimeCP = TimeCheckpoint;
+		PlayerNameIt->m_CurrentTimeCP[TimeCheckpoint] = pChr->GetTime();
 		PlayerNameIt->m_AmountOfTimeCPs++;
+
+		//dbg_msg("TIMECP", "PLAYER NAME IS %s\nTIMECP %i\nCURRENT CP TIME IS %f\n CURRENT TIME IS %f", PlayerNameIt->m_PlayerName.c_str(), TimeCheckpoint, PlayerNameIt->m_CurrentTimeCP[TimeCheckpoint], pChr->GetTime());
 
 		std::sort(m_PlayerLeaderboard.begin(), m_PlayerLeaderboard.end(), SplitsComparator);
 	}
@@ -341,7 +345,7 @@ void CGameControllerCup::CupOnPlayerFinish(int ClientId)
 	auto player = GetPlayerByName(PlayerName);
 
 	if (m_CupState == STATE_WARMUP && player == m_PlayerLeaderboard.end())
-		m_PlayerLeaderboard.emplace_back(m_sPlayersInfo{
+		m_PlayerLeaderboard.emplace_back(Sm_PlayersInfo{
 			Server()->ClientName(ClientId),
 		});
 
@@ -360,11 +364,6 @@ void CGameControllerCup::CupOnPlayerFinish(int ClientId)
 
 		player->m_HasFinished = true;
 		std::sort(m_PlayerLeaderboard.begin(), m_PlayerLeaderboard.end(), SplitsComparator);
-
-		for (auto &Player : m_PlayerLeaderboard)
-		{
-			dbg_msg("LEADERBOARDPRINT", "name : %s\n amount of cps : %i\n timecps : %f\n has finishes : %i\n", Player.m_PlayerName.c_str(), Player.m_AmountOfTimeCPs, Player.m_CurrentTimeCP, Player.m_HasFinished);
-		}
 
 		//last player finishing
 		if (m_PlayerLeaderboard.back().m_HasFinished == true)
@@ -392,8 +391,8 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 	CPlayer *pPlayer = pChr->GetPlayer();
 	const int ClientId = pPlayer->GetCid();
 
-	int m_TileIndex = GameServer()->Collision()->GetTileIndex(MapIndex);
-	int m_TileFIndex = GameServer()->Collision()->GetFTileIndex(MapIndex);
+	int TileIndex = GameServer()->Collision()->GetTileIndex(MapIndex);
+	int TileFIndex = GameServer()->Collision()->GetFTileIndex(MapIndex);
 
 	//Sensitivity
 	int S1 = GameServer()->Collision()->GetPureMapIndex(vec2(pChr->GetPos().x + pChr->GetProximityRadius() / 3.f, pChr->GetPos().y - pChr->GetProximityRadius() / 3.f));
@@ -410,7 +409,7 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 	int FTile4 = GameServer()->Collision()->GetFTileIndex(S4);
 
 	const int PlayerDDRaceState = pChr->m_DDRaceState;
-	bool IsOnStartTile = (m_TileIndex == TILE_START) || (m_TileFIndex == TILE_START) || FTile1 == TILE_START || FTile2 == TILE_START || FTile3 == TILE_START || FTile4 == TILE_START || Tile1 == TILE_START || Tile2 == TILE_START || Tile3 == TILE_START || Tile4 == TILE_START;
+	bool IsOnStartTile = (TileIndex == TILE_START) || (TileFIndex == TILE_START) || FTile1 == TILE_START || FTile2 == TILE_START || FTile3 == TILE_START || FTile4 == TILE_START || Tile1 == TILE_START || Tile2 == TILE_START || Tile3 == TILE_START || Tile4 == TILE_START;
 	// start
 	if(IsOnStartTile && PlayerDDRaceState != DDRACE_CHEAT)
 	{
@@ -453,26 +452,26 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 	}
 
 	// finish
-	if(((m_TileIndex == TILE_FINISH) || (m_TileFIndex == TILE_FINISH) || FTile1 == TILE_FINISH || FTile2 == TILE_FINISH || FTile3 == TILE_FINISH || FTile4 == TILE_FINISH || Tile1 == TILE_FINISH || Tile2 == TILE_FINISH || Tile3 == TILE_FINISH || Tile4 == TILE_FINISH) && PlayerDDRaceState == DDRACE_STARTED)
+	if(((TileIndex == TILE_FINISH) || (TileFIndex == TILE_FINISH) || FTile1 == TILE_FINISH || FTile2 == TILE_FINISH || FTile3 == TILE_FINISH || FTile4 == TILE_FINISH || Tile1 == TILE_FINISH || Tile2 == TILE_FINISH || Tile3 == TILE_FINISH || Tile4 == TILE_FINISH) && PlayerDDRaceState == DDRACE_STARTED)
 	{
 		Teams().OnCharacterFinish(ClientId);
 		CupOnPlayerFinish(ClientId);
 	}
 
 	// unlock team
-	else if(((m_TileIndex == TILE_UNLOCK_TEAM) || (m_TileFIndex == TILE_UNLOCK_TEAM)) && Teams().TeamLocked(GameServer()->GetDDRaceTeam(ClientId)))
+	else if(((TileIndex == TILE_UNLOCK_TEAM) || (TileFIndex == TILE_UNLOCK_TEAM)) && Teams().TeamLocked(GameServer()->GetDDRaceTeam(ClientId)))
 	{
 		Teams().SetTeamLock(GameServer()->GetDDRaceTeam(ClientId), false);
 		GameServer()->SendChatTeam(GameServer()->GetDDRaceTeam(ClientId), "Your team was unlocked by an unlock team tile");
 	}
 
 	// solo part
-	if(((m_TileIndex == TILE_SOLO_ENABLE) || (m_TileFIndex == TILE_SOLO_ENABLE)) && !Teams().m_Core.GetSolo(ClientId))
+	if(((TileIndex == TILE_SOLO_ENABLE) || (TileFIndex == TILE_SOLO_ENABLE)) && !Teams().m_Core.GetSolo(ClientId))
 	{
 		GameServer()->SendChatTarget(ClientId, "You are now in a solo part");
 		pChr->SetSolo(true);
 	}
-	else if(((m_TileIndex == TILE_SOLO_DISABLE) || (m_TileFIndex == TILE_SOLO_DISABLE)) && Teams().m_Core.GetSolo(ClientId))
+	else if(((TileIndex == TILE_SOLO_DISABLE) || (TileFIndex == TILE_SOLO_DISABLE)) && Teams().m_Core.GetSolo(ClientId))
 	{
 		GameServer()->SendChatTarget(ClientId, "You are now out of the solo part");
 		pChr->SetSolo(false);

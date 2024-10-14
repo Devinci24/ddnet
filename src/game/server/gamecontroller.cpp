@@ -753,8 +753,3 @@ void IGameController::DoTeamChange(CPlayer *pPlayer, int Team, bool DoChatMsg)
 
 	// OnPlayerInfoChange(pPlayer);
 }
-
-int IGameController::GetState() const
-{
-	return 0;
-}

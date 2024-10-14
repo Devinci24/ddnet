@@ -266,6 +266,9 @@ public:
 
 	CSaveTee &GetLastRescueTeeRef(int Mode = RESCUEMODE_AUTO) { return m_RescueTee[Mode]; }
 	CTuningParams *GetTuning(int Zone) { return Zone ? &TuningList()[Zone] : Tuning(); }
+
+	//my changes
+	float GetTime() const {return m_Time;}
 };
 
 enum

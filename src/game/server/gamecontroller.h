@@ -9,6 +9,7 @@
 #include <game/server/teams.h>
 
 struct CScoreLoadBestTimeResult;
+struct Sm_PlayersInfo;
 
 /*
 	Class: Game Controller
@@ -154,9 +155,6 @@ public:
 	float m_CurrentRecord;
 	CGameTeams &Teams() { return m_Teams; }
 	std::shared_ptr<CScoreLoadBestTimeResult> m_pLoadBestTimeResult;
-
-	//my changes
-	virtual int GetState() const;
 };
 
 #endif
