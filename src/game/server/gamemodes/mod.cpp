@@ -312,7 +312,12 @@ bool CGameControllerCup::SplitsComparator(const Sm_PlayersInfo& player1, Sm_Play
         return player1.m_HasFinished;
 
     if (player1.m_AmountOfTimeCPs == player2.m_AmountOfTimeCPs)
-        return player1.m_CurrentTimeCP < player2.m_CurrentTimeCP;
+	{
+		int TimeCheckpoint = 0;
+		while (player1.m_CurrentTimeCP[TimeCheckpoint] && TimeCheckpoint < MAX_CHECKPOINTS)
+			TimeCheckpoint++;
+        return player1.m_CurrentTimeCP[TimeCheckpoint] < player2.m_CurrentTimeCP[TimeCheckpoint];
+	}
 
     return player1.m_AmountOfTimeCPs > player2.m_AmountOfTimeCPs;
 }
