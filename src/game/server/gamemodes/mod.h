@@ -21,7 +21,6 @@ private:
 	void RemoveEliminatedPlayers();
 
 	//Rounds
-	//void SetSplits(CPlayer *pThisPlayer, int TimeCheckpoint);
 	void CupOnPlayerFinish(int ClientId);
 	void CleanUp();
 

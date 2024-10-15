@@ -7,6 +7,7 @@
 #include "game/server/teams.h"
 #include "game/teamscore.h"
 
+#include <csignal>
 #include <engine/shared/protocol.h>
 #include <game/server/gamecontext.h>
 #include <game/server/player.h>
@@ -176,17 +177,18 @@ void CGameControllerCup::OnPlayerConnect(CPlayer *pPlayer)
 		GameServer()->SendChatTarget(ClientId, "CupOfTheWeek. Version: " GAME_VERSION);
 	}
 
-	//this doesn't work. Sends to console instead
 	if(m_CupState == STATE_WARMUP && m_Warmup)
 	{
+		char aBuf[512];
 		int Seconds = m_Warmup / Server()->TickSpeed();
-		GameServer()->SendChatTarget(ClientId, "Qualifications have already started. But don't worry!! You still have %d seconds of left to qualify", Seconds);
+		str_format(aBuf, sizeof(aBuf), "Qualifications have already started. But don't worry!! You still have %d seconds of left to qualify", Seconds);
+		GameServer()->SendChatTarget(ClientId, aBuf);
 	}
 
 	if(m_CupState == STATE_NONE)
 		Score()->LoadPlayerData(ClientId);
 
-	if(m_CupState == STATE_ROUND)
+	if(m_CupState == STATE_ROUND || m_CupState == STATE_WARMUP_ROUND)
 	{
 		auto PlayerInfo = GetPlayerByName(Server()->ClientName(ClientId));
 		if(PlayerInfo == m_vPlayerLeaderboard.end())
@@ -195,14 +197,6 @@ void CGameControllerCup::OnPlayerConnect(CPlayer *pPlayer)
 			pPlayer->SetTeam(ELIMINATED_TEAM);
 		}
 	}
-
-	//set to previous team idea
-	// if (m_RoundStarted)
-	// {
-	// 	const char *clientName = Server()->ClientName(ClientId);
-	// 	if (auto player = m_disconnectedPlayers.find(clientName); player != m_disconnectedPlayers.end())
-	// 		Teams().SetForceCharacterTeam(ClientId, player->second);
-	// }
 }
 
 //get previous team idea
@@ -280,6 +274,8 @@ void CGameControllerCup::CleanUp()
 				Score()->LoadPlayerData(ClientId);
 			else
 				pPlayer->m_Score.reset();
+			
+			//pPlayer->Reset(); //maybe needed? Got a bug where I couldn't finish even when touching both start and finish. maybe this fix.
 		}
 	}
 
@@ -306,6 +302,7 @@ void CGameControllerCup::EndRound()
 		}
 
 		CleanUp();
+		//probably should kill everyone here
 	}
 	else
 		PrepareRound();
@@ -353,6 +350,7 @@ void CGameControllerCup::SetSplits(CPlayer *pThisPlayer, int TimeCheckpoint)
 		//dbg_msg("TIMECP", "PLAYER NAME IS %s\nTIMECP %i\nCURRENT CP TIME IS %f\n CURRENT TIME IS %f", PlayerNameIt->m_PlayerName.c_str(), TimeCheckpoint, PlayerNameIt->m_CurrentTimeCP[TimeCheckpoint], pChr->GetTime());
 
 		std::sort(m_vPlayerLeaderboard.begin(), m_vPlayerLeaderboard.end(), SplitsComparator);
+
 	}
 }
 
@@ -370,7 +368,7 @@ void CGameControllerCup::CupOnPlayerFinish(int ClientId)
 		m_vPlayerLeaderboard.emplace_back(PlayerInfo);
 	}
 
-	else if(m_CupState == STATE_ROUND)
+	else if(m_CupState == STATE_ROUND && Player != m_vPlayerLeaderboard.end())
 	{
 		//this should never proc?
 		if(m_vPlayerLeaderboard.empty())
@@ -394,18 +392,6 @@ void CGameControllerCup::CupOnPlayerFinish(int ClientId)
 		}
 	}
 }
-
-// bool CGameControllerCup::CanJoinTeam(int Team, int NotThisId, char *pErrorReason, int ErrorReasonSize)
-// {
-// 	//TODO DO SOMETHING WITH THIS SO IT MAKES SENSE
-
-// 	// str_copy(
-// 	// 	pErrorReason,
-// 	// 	"COTW has started! You can't change yout team while the game is in process.",
-// 	// 	ErrorReasonSize);
-// 	// return false;
-// 	return true;
-// }
 
 void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 {
