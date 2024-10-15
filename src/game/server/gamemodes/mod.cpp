@@ -97,17 +97,30 @@ void CGameControllerCup::StartCup(int WarmupTime)
 	m_RoundStartTick = 0;
 
 	CleanUp();
+	m_PlayerLeaderboard.clear();
 	GameServer()->ResetTuning();
 
-	if (WarmupTime)
-		DoWarmup(WarmupTime);
-	else
-	 	DoWarmup(WARMUP_TIME);
-	
-	m_PlayerLeaderboard.clear();
-
 	char aBuf[256];
-	str_format(aBuf, sizeof(aBuf), "Qualifications have started. You have %d secondes left to qualify and make it to the elimination rounds!", WarmupTime);
+	if (WarmupTime)
+	{
+		DoWarmup(WarmupTime);
+		str_format(aBuf, sizeof(aBuf), "Qualifications have started. You have %d secondes left to qualify and make it to the elimination rounds!", WarmupTime);
+	}
+	else
+	{
+		for(int ClientId = 0; ClientId < Server()->MaxClients(); ClientId++)
+		{
+			if(Server()->ClientIngame(ClientId))
+			{
+				m_PlayerLeaderboard.emplace_back(Sm_PlayersInfo{
+					Server()->ClientName(ClientId),
+				});
+			}
+		}
+		m_Warmup = 0;
+		str_copy(aBuf, "No qualifications! Cup has started!!! GOGOGOGOOO");
+	}
+
 	GameServer()->SendBroadcast(aBuf, -1);
 }
 
@@ -221,6 +234,10 @@ void CGameControllerCup::RemoveEliminatedPlayers()
 
 	std::sort(m_PlayerLeaderboard.begin(), m_PlayerLeaderboard.end(), SplitsComparator);
 
+	for (const auto& playera : m_PlayerLeaderboard)
+		dbg_msg("LEADERBOARDPRINT", "\nname : %s\n amount of cps : %i\n timecps : %f\n has finishes : %i\n\n", playera.m_PlayerName.c_str(), playera.m_AmountOfTimeCPs, playera.m_HasFinished);
+	dbg_msg("LEADERBOARD", "\n\n");
+
 	int size = m_PlayerLeaderboard.size();
 
 	char aBuf[256];
@@ -230,6 +247,10 @@ void CGameControllerCup::RemoveEliminatedPlayers()
 		GameServer()->SendChat(-1, protocol7::CHAT_ALL, aBuf);
 		m_PlayerLeaderboard.pop_back();
 	}
+
+	//remove player if they haven't finished
+	while (!m_PlayerLeaderboard.back().m_HasFinished && !m_PlayerLeaderboard.empty())
+		m_PlayerLeaderboard.pop_back();
 }
 
 //needs a better name
@@ -287,8 +308,7 @@ void CGameControllerCup::EndRound()
 			GameServer()->SendBroadcast(aBuf, -1);
 		}
 		else {
-			str_copy(aBuf, "No one managed to qualify O.o");
-			GameServer()->SendBroadcast(aBuf, -1);
+			GameServer()->SendBroadcast("No one managed to qualify O.o", -1);
 		}
 
 		CleanUp();
@@ -482,7 +502,7 @@ void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 		pChr->SetSolo(false);
 	}
 
-	//splits
+	//splits - should be now useless? Maybe only needed for dbg dummies
 	if (m_CupState == STATE_ROUND)
 	{
 		SetSplits(pPlayer, GameServer()->Collision()->IsTimeCheckpoint(MapIndex));

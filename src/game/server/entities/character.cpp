@@ -1497,10 +1497,6 @@ void CCharacter::SetTimeCheckpoint(int TimeCheckpoint)
 						Msg.m_Check = 0.0f;
 					else
 						Msg.m_Check =  (int)((Player->m_CurrentTimeCP[TimeCheckpoint] - std::prev(Player)->m_CurrentTimeCP[TimeCheckpoint]) * 100);
-					
-					for (const auto& playera : Cup->m_PlayerLeaderboard)
-						dbg_msg("LEADERBOARDPRINT", "\n\n\nname : %s\n amount of cps : %i\n timecps : %f\n has finishes : %i\n", playera.m_PlayerName.c_str(), playera.m_AmountOfTimeCPs, playera.m_CurrentTimeCP[TimeCheckpoint], playera.m_HasFinished);
-
 				}
 
 				Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, m_pPlayer->GetCid());
