@@ -29,8 +29,8 @@
 #include <base/system.h>
 #include <base/vmath.h>
 
-#include "gameclient.h"
 #include "engine/shared/network.h"
+#include "gameclient.h"
 #include "lineinput.h"
 #include "race.h"
 #include "render.h"

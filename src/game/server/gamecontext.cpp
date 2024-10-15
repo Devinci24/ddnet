@@ -3617,11 +3617,13 @@ void CGameContext::ConRestartCup(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 
-	if (auto *pCupController = dynamic_cast<CGameControllerCup*>(pSelf->m_pController))
+	if(auto *pCupController = dynamic_cast<CGameControllerCup *>(pSelf->m_pController))
 	{
 		pCupController->StartCup(pResult->GetInteger(0));
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "restarting cup");
-	} else {
+	}
+	else
+	{
 		log_warn("server", "Failed to restart cup");
 	}
 }

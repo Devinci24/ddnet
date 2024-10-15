@@ -268,7 +268,7 @@ public:
 	CTuningParams *GetTuning(int Zone) { return Zone ? &TuningList()[Zone] : Tuning(); }
 
 	//my changes
-	float GetTime() const {return m_Time;}
+	float GetTime() const { return m_Time; }
 };
 
 enum

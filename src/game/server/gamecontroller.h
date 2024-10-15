@@ -9,7 +9,6 @@
 #include <game/server/teams.h>
 
 struct CScoreLoadBestTimeResult;
-struct Sm_PlayersInfo;
 
 /*
 	Class: Game Controller
@@ -68,7 +67,6 @@ protected:
 	bool m_ForceBalanced;
 
 public:
-
 	const char *m_pGameType;
 
 	IGameController(class CGameContext *pGameServer);

@@ -1488,15 +1488,15 @@ void CCharacter::SetTimeCheckpoint(int TimeCheckpoint)
 				Msg.m_Check = (int)Diff;
 
 				//my changes
-				CGameControllerCup *Cup = dynamic_cast<CGameControllerCup*>(GameServer()->m_pController);
-				if (Cup && Cup->GetState() == 3)
+				CGameControllerCup *Cup = dynamic_cast<CGameControllerCup *>(GameServer()->m_pController);
+				if(Cup && Cup->GetState() == CGameControllerCup::STATE_ROUND)
 				{
 					Cup->SetSplits(GetPlayer(), TimeCheckpoint);
 					auto Player = Cup->GetPlayerByName(Server()->ClientName(m_pPlayer->GetCid()));
-					if (Player == Cup->m_PlayerLeaderboard.begin())
+					if(Player == Cup->m_vPlayerLeaderboard.begin())
 						Msg.m_Check = 0.0f;
 					else
-						Msg.m_Check =  (int)((Player->m_CurrentTimeCP[TimeCheckpoint] - std::prev(Player)->m_CurrentTimeCP[TimeCheckpoint]) * 100);
+						Msg.m_Check = (int)((Player->m_aCurrentTimeCps[TimeCheckpoint] - std::prev(Player)->m_aCurrentTimeCps[TimeCheckpoint]) * 100);
 				}
 
 				Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, m_pPlayer->GetCid());

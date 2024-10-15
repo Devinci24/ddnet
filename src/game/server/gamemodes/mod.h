@@ -1,32 +1,17 @@
 #ifndef GAME_SERVER_GAMEMODES_MOD_H
 #define GAME_SERVER_GAMEMODES_MOD_H
 
+#include "engine/shared/protocol.h"
 #include <game/server/gamecontroller.h>
 #include <vector>
-
-struct Sm_PlayersInfo {
-	std::string m_PlayerName;
-	float m_CurrentTimeCP[MAX_CHECKPOINTS];
-	int m_AmountOfTimeCPs = 0;
-	bool m_HasFinished = false;
-};
 
 class CGameControllerCup : public IGameController
 {
 private:
-
-	enum
-	{
-		STATE_NONE,
-		STATE_WARMUP,
-		STATE_WARMUP_ROUND,
-		STATE_ROUND,
-	};
-
 	int m_CupState;
 
 	//start
-	void SendtWarmupMsg();
+	void SendWarmupMsg();
 	void PrepareRound();
 	void PausePlayersTune();
 	void StartRound() override; //do I really want to override?
@@ -44,6 +29,21 @@ private:
 	//bool CanJoinTeam(int Team, int NotThisId, char *pErrorReason, int ErrorReasonSize) override;
 
 public:
+	struct SPlayersInfo
+	{
+		char m_aPlayerName[MAX_NAME_LENGTH] = "\0";
+		float m_aCurrentTimeCps[MAX_CHECKPOINTS] = {0.0f};
+		int m_AmountOfTimeCPs = 0;
+		bool m_HasFinished = false;
+	};
+	enum
+	{
+		STATE_NONE,
+		STATE_WARMUP,
+		STATE_WARMUP_ROUND,
+		STATE_ROUND,
+	};
+
 	CGameControllerCup(class CGameContext *pGameServer);
 	~CGameControllerCup();
 
@@ -58,11 +58,10 @@ public:
 	void StartCup(int WarmupTime);
 	int GetState() const;
 
-	std::vector<Sm_PlayersInfo>::iterator GetPlayerByName(const char* PlayerName);
-	static bool SplitsComparator(const Sm_PlayersInfo& player1, Sm_PlayersInfo& player2);
+	std::vector<SPlayersInfo>::iterator GetPlayerByName(const char *PlayerName);
+	static bool SplitsComparator(const SPlayersInfo &Player1, SPlayersInfo &Player2);
 	void SetSplits(CPlayer *pThisPlayer, int TimeCheckpoint);
 
-	std::vector<Sm_PlayersInfo> m_PlayerLeaderboard;
-
+	std::vector<SPlayersInfo> m_vPlayerLeaderboard;
 };
 #endif // GAME_SERVER_GAMEMODES_MOD_H
