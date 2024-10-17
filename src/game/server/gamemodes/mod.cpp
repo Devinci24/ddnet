@@ -404,7 +404,8 @@ bool CGameControllerCup::CanJoinTeam(int Team, int NotThisId, char *pErrorReason
 {
 	if((m_CupState == STATE_ROUND || m_CupState == STATE_WARMUP_ROUND) && Team != TEAM_SPECTATORS)
 	{
-		str_copy(pErrorReason, "Cup has already started. You will be able to play once it ends", ErrorReasonSize);
+		if (pErrorReason)
+			str_copy(pErrorReason, "Cup has already started. You will be able to play once it ends", ErrorReasonSize);
 		return false;
 	}
 
