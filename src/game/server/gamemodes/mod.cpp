@@ -276,6 +276,14 @@ void CGameControllerCup::CleanUp()
 				pPlayer->m_Score.reset();
 			
 			//pPlayer->Reset(); //maybe needed? Got a bug where I couldn't finish even when touching both start and finish. maybe this fix.
+
+			//maybe killing the player fixes it?
+			if (pPlayer->GetTeam() == TEAM_FLOCK)
+			{
+				pPlayer->m_LastKill = Server()->Tick();
+				pPlayer->KillCharacter(WEAPON_SELF);
+				pPlayer->Respawn();
+			}
 		}
 	}
 
@@ -302,7 +310,6 @@ void CGameControllerCup::EndRound()
 		}
 
 		CleanUp();
-		//probably should kill everyone here
 	}
 	else
 		PrepareRound();
@@ -391,6 +398,17 @@ void CGameControllerCup::CupOnPlayerFinish(int ClientId)
 			EndRound();
 		}
 	}
+}
+
+bool CGameControllerCup::CanJoinTeam(int Team, int NotThisId, char *pErrorReason, int ErrorReasonSize)
+{
+	if((m_CupState == STATE_ROUND || m_CupState == STATE_WARMUP_ROUND) && Team != TEAM_SPECTATORS)
+	{
+		str_copy(pErrorReason, "Cup has already started. You will be able to play once it ends", ErrorReasonSize);
+		return false;
+	}
+
+	return IGameController::CanJoinTeam(Team, NotThisId, pErrorReason, ErrorReasonSize);
 }
 
 void CGameControllerCup::HandleCharacterTiles(CCharacter *pChr, int MapIndex)

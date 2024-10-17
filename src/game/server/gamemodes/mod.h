@@ -52,6 +52,7 @@ public:
 	void HandleCharacterTiles(class CCharacter *pChr, int MapIndex) override;
 	void Snap(int SnappingClient) override;
 	void OnPlayerConnect(CPlayer *pPlayer) override;
+	bool CanJoinTeam(int Team, int NotThisId, char *pErrorReason, int ErrorReasonSize) override;
 
 	//used outside
 	void StartCup(int WarmupTime);
