@@ -264,7 +264,8 @@ void CSqliteConnection::Print()
 	)
 	{
 		char *pExpandedStmt = sqlite3_expanded_sql(m_pStmt);
-		dbg_msg("sql", "SQLite statement: %s", pExpandedStmt);
+		//my changes (commented dbg_msg)
+		//dbg_msg("sql", "SQLite statement: %s", pExpandedStmt);
 		sqlite3_free(pExpandedStmt);
 	}
 }

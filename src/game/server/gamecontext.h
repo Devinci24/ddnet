@@ -142,6 +142,7 @@ class CGameContext : public IGameServer
 
 	//my changes
 	static void ConRestartCup(IConsole::IResult *pResult, void *pUserData);
+	static void ConChangeCupMode(IConsole::IResult *pResult, void *pUserData);
 
 	void Construct(int Resetting);
 	void Destruct(int Resetting);

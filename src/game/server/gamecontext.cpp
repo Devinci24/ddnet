@@ -3623,9 +3623,23 @@ void CGameContext::ConRestartCup(IConsole::IResult *pResult, void *pUserData)
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "restarting cup");
 	}
 	else
-	{
 		log_warn("server", "Failed to restart cup");
+}
+
+void CGameContext::ConChangeCupMode(IConsole::IResult *pResult, void *pUserData)
+{
+	if(!pResult->NumArguments())
+		return ;
+
+	CGameContext *pSelf = (CGameContext *)pUserData;
+
+	if(auto *pCupController = dynamic_cast<CGameControllerCup *>(pSelf->m_pController))
+	{
+		pCupController->SetCupMode(pResult->GetInteger(0));
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "changing cup mode");
 	}
+	else
+		log_warn("server", "Failed to change cup mode");
 }
 
 void CGameContext::OnConsoleInit()
@@ -3671,7 +3685,9 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("dump_antibot", "", CFGFLAG_SERVER, ConDumpAntibot, this, "Dumps the antibot status");
 	Console()->Register("antibot", "r[command]", CFGFLAG_SERVER, ConAntibot, this, "Sends a command to the antibot");
 
+	//my changes
 	Console()->Register("COTW_restart", "?i[seconds]", CFGFLAG_SERVER, ConRestartCup, this, "restart the cup (60 seconds warmup by default)");
+	Console()->Register("COTW_mode", "i[mode]", CFGFLAG_SERVER, ConChangeCupMode, this, "Change cup mode: 0 for race and 1 for endless rounds");
 
 	Console()->Chain("sv_motd", ConchainSpecialMotdupdate, this);
 

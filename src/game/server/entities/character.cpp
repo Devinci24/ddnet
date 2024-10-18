@@ -1479,7 +1479,10 @@ void CCharacter::SetTimeCheckpoint(int TimeCheckpoint)
 		if(m_pPlayer->GetClientVersion() >= VERSION_DDRACE)
 		{
 			CPlayerData *pData = GameServer()->Score()->PlayerData(m_pPlayer->GetCid());
-			if(pData->m_aBestTimeCp[m_LastTimeCp] != 0.0f)
+
+			//my changes
+			CGameControllerCup *Cup = dynamic_cast<CGameControllerCup *>(GameServer()->m_pController);
+			if(pData->m_aBestTimeCp[m_LastTimeCp] != 0.0f || (Cup && Cup->GetState() == CGameControllerCup::STATE_ROUND)) //needed so it also counts on first time playing map
 			{
 				CNetMsg_Sv_DDRaceTime Msg;
 				Msg.m_Time = (int)(m_Time * 100.0f);
@@ -1488,7 +1491,6 @@ void CCharacter::SetTimeCheckpoint(int TimeCheckpoint)
 				Msg.m_Check = (int)Diff;
 
 				//my changes
-				CGameControllerCup *Cup = dynamic_cast<CGameControllerCup *>(GameServer()->m_pController);
 				if(Cup && Cup->GetState() == CGameControllerCup::STATE_ROUND)
 				{
 					Cup->SetSplits(GetPlayer(), TimeCheckpoint);

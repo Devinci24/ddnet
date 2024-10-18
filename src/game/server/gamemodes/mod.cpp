@@ -23,10 +23,11 @@
 
 #define GAME_TYPE_NAME "Cup"
 #define TEST_TYPE_NAME "TestCup"
-#define WARMUP_TIME 60
+#define WARMUP_TIME 900
 #define COUNTDOWN 3
-#define END_ROUND_TIMER 20
-#define BROADCAST_TIME 6
+#define COUNTDOWN_LONG 10 // to make a small break in between games
+#define END_ROUND_TIMER 30
+#define END_ROUND_TIMER_SMALL 5 // used when only 2 players remaining.
 #define ELIMINATED_TEAM TEAM_SPECTATORS //if this changes to actual team, will have to add SetForceCharacterTeam
 
 #include <unistd.h>
@@ -36,6 +37,13 @@ CGameControllerCup::CGameControllerCup(class CGameContext *pGameServer) :
 {
 	m_pGameType = g_Config.m_SvTestingCommands ? TEST_TYPE_NAME : GAME_TYPE_NAME;
 
+	m_CupMode = MODE_REALCUP;
+	m_CupState = STATE_WARMUP;
+
+	m_TimersInfo.m_WarmupTimer = WARMUP_TIME;
+	m_TimersInfo.m_Coundown = COUNTDOWN;
+	m_TimersInfo.m_EndRoundTimer = END_ROUND_TIMER; //unused
+
 	StartCup(WARMUP_TIME);
 }
 
@@ -44,6 +52,25 @@ CGameControllerCup::~CGameControllerCup() = default;
 int CGameControllerCup::GetState() const
 {
 	return m_CupState;
+}
+
+void CGameControllerCup::SetCupMode(int Mode)
+{
+	switch(Mode) {
+		case 0: //maybe also clear playersInfo vector?
+			m_CupMode = MODE_RACE;
+			m_Warmup = -1;
+
+			GameServer()->ResetTuning();
+			CleanUp();
+			break;
+		case 1:
+			m_TimersInfo.m_WarmupTimer = 0;
+			m_CupMode = MODE_LOOPCUP;
+
+			StartCup(m_TimersInfo.m_WarmupTimer);
+			break;
+	} //maybe do more modes?
 }
 
 void CGameControllerCup::PausePlayersTune()
@@ -70,8 +97,11 @@ void CGameControllerCup::PrepareRound()
 	m_CupState = STATE_WARMUP_ROUND;
 
 	CleanUp();
-	DoWarmup(COUNTDOWN);
+	DoWarmup(m_TimersInfo.m_Coundown);
 	PausePlayersTune();
+
+	//make countdown small again
+	m_TimersInfo.m_Coundown = COUNTDOWN ;
 
 	//reset stats
 	for(auto &PlayerInfo : m_vPlayerLeaderboard)
@@ -92,7 +122,12 @@ void CGameControllerCup::StartRound()
 void CGameControllerCup::StartCup(int WarmupTime)
 {
 	m_CupState = STATE_WARMUP;
+	if (m_CupMode == MODE_RACE)
+		m_CupMode = MODE_REALCUP;
+
 	m_RoundStartTick = 0;
+
+	m_TimersInfo.m_WarmupTimer = WarmupTime;
 
 	CleanUp();
 	m_vPlayerLeaderboard.clear();
@@ -103,22 +138,22 @@ void CGameControllerCup::StartCup(int WarmupTime)
 	{
 		DoWarmup(WarmupTime);
 		str_format(aBuf, sizeof(aBuf), "Qualifications have started. You have %d secondes left to qualify and make it to the elimination rounds!", WarmupTime);
-	}
-	else
-	{
-		for(int ClientId = 0; ClientId < Server()->MaxClients(); ClientId++)
-		{
-			if(Server()->ClientIngame(ClientId))
-			{
-				SPlayersInfo PlayerInfo;
-				str_copy(PlayerInfo.m_aPlayerName, Server()->ClientName(ClientId));
-				m_vPlayerLeaderboard.emplace_back(PlayerInfo);
-			}
-		}
-		m_Warmup = 0;
-		str_copy(aBuf, "No qualifications! Cup has started!!! GOGOGOGOOO");
+		GameServer()->SendBroadcast(aBuf, -1);
+		return ;
 	}
 
+	//makes everyone participate in cup
+	for(int ClientId = 0; ClientId < Server()->MaxClients(); ClientId++)
+	{
+		if(Server()->ClientIngame(ClientId) && m_aPlayers[ClientId].m_active)
+		{
+			SPlayersRaceInfo PlayerInfo;
+			str_copy(PlayerInfo.m_aPlayerName, Server()->ClientName(ClientId));
+			m_vPlayerLeaderboard.emplace_back(PlayerInfo);
+		}
+	}
+	m_Warmup = 0;
+	str_copy(aBuf, "Cup has started!!! GOGOGOGOOO");
 	GameServer()->SendBroadcast(aBuf, -1);
 }
 
@@ -165,6 +200,8 @@ void CGameControllerCup::OnPlayerConnect(CPlayer *pPlayer)
 	IGameController::OnPlayerConnect(pPlayer);
 	int ClientId = pPlayer->GetCid();
 
+	m_aPlayers[ClientId].m_active = true;
+
 	//init the player?
 	Score()->PlayerData(ClientId)->Reset();
 
@@ -185,7 +222,7 @@ void CGameControllerCup::OnPlayerConnect(CPlayer *pPlayer)
 		GameServer()->SendChatTarget(ClientId, aBuf);
 	}
 
-	if(m_CupState == STATE_NONE)
+	if(m_CupMode == MODE_RACE)
 		Score()->LoadPlayerData(ClientId);
 
 	if(m_CupState == STATE_ROUND || m_CupState == STATE_WARMUP_ROUND)
@@ -193,27 +230,24 @@ void CGameControllerCup::OnPlayerConnect(CPlayer *pPlayer)
 		auto PlayerInfo = GetPlayerByName(Server()->ClientName(ClientId));
 		if(PlayerInfo == m_vPlayerLeaderboard.end())
 		{
-			GameServer()->SendChatTarget(ClientId, "Cup has already started :c. You will be able to play once it ends");
+			GameServer()->SendBroadcast("Cup has already started :c. You will be able to play once it ends", ClientId);
 			pPlayer->SetTeam(ELIMINATED_TEAM);
 		}
 	}
 }
 
-//get previous team idea
-// void CGameControllerCup::OnPlayerDisconnect(CPlayer *pPlayer, const char *pReason)
-// {
-// 	int ClientId = pPlayer->GetCid();
-// 	const int teamId = GameServer()->GetDDRaceTeam(ClientId);
+void CGameControllerCup::OnPlayerDisconnect(CPlayer *pPlayer, const char *pReason)
+{
+	auto player = GetPlayerByName(Server()->ClientName(pPlayer->GetCid()));
+	if (player != m_vPlayerLeaderboard.end())
+		m_vPlayerLeaderboard.erase(player);
+	m_aPlayers[pPlayer->GetCid()].m_active = false;
 
-// 	IGameController::OnPlayerDisconnect(pPlayer, pReason);
-
-// 	if (m_RoundStarted)
-// 	{
-// 		const char *clientName = Server()->ClientName(ClientId);
-
-// 		m_disconnectedPlayers.insert({clientName, teamId});
-// 	}
-// }
+	//if player rq'd
+	if (m_vPlayerLeaderboard.back().m_HasFinished)
+		EndRound();
+	IGameController::OnPlayerDisconnect(pPlayer, pReason);
+}
 
 void CGameControllerCup::RemoveEliminatedPlayers()
 {
@@ -222,9 +256,9 @@ void CGameControllerCup::RemoveEliminatedPlayers()
 
 	std::sort(m_vPlayerLeaderboard.begin(), m_vPlayerLeaderboard.end(), SplitsComparator);
 
-	for(const auto &Player : m_vPlayerLeaderboard)
-		dbg_msg("LEADERBOARDPRINT", "\nname : %s\n amount of cps : %i\n timecps : %f\n has finishes : %i\n\n", Player.m_aPlayerName, Player.m_AmountOfTimeCPs, Player.m_HasFinished);
-	dbg_msg("LEADERBOARD", "\n\n");
+	//for(const auto &Player : m_vPlayerLeaderboard)
+	//	dbg_msg("LEADERBOARDPRINT", "\nname : %s\n amount of cps : %i\n timecps : %f\n has finishes : %i\n\n", Player.m_aPlayerName, Player.m_AmountOfTimeCPs, Player.m_HasFinished);
+	//dbg_msg("LEADERBOARD", "\n\n");
 
 	int size = m_vPlayerLeaderboard.size();
 
@@ -256,21 +290,22 @@ void CGameControllerCup::CleanUp()
 			//put player into spec or not when in rounds.
 			if(m_CupState == STATE_WARMUP_ROUND) // (|| STATE_ROUND ) for convenience?
 			{
-				if(playerInfo == m_vPlayerLeaderboard.end() && pPlayer->GetTeam() != ELIMINATED_TEAM) //CRASH HERE AT SECOND ROUND
+				if(playerInfo == m_vPlayerLeaderboard.end() && pPlayer->GetTeam() != ELIMINATED_TEAM) //player is eliminated.
 					pPlayer->SetTeam(ELIMINATED_TEAM);
-				else if(playerInfo != m_vPlayerLeaderboard.end() && pPlayer->GetTeam() == ELIMINATED_TEAM)
-					pPlayer->SetTeam(TEAM_FLOCK);
+				// else if(playerInfo != m_vPlayerLeaderboard.end() && pPlayer->GetTeam() == ELIMINATED_TEAM) //
+				// 	pPlayer->SetTeam(TEAM_FLOCK);
 			}
 
 			//Put Player into any playable team once cup ends.
-			if(m_CupState == STATE_NONE || m_CupState == STATE_WARMUP)
+			if((m_CupMode == MODE_RACE || m_CupState == STATE_WARMUP) && m_aPlayers[ClientId].m_active)
 			{
+				//dbg_msg("CLEANUP", "CUP MODE IS: %i, CUP STATE IS %i. Player is: %i", m_CupMode, m_CupState, m_aPlayers[ClientId].m_active);
 				if(pPlayer->GetTeam() == ELIMINATED_TEAM)
 					pPlayer->SetTeam(TEAM_FLOCK);
 			}
 
 			//set score back if end Otherwise remove score
-			if(m_CupState == STATE_NONE)
+			if(m_CupMode == MODE_RACE)
 				Score()->LoadPlayerData(ClientId);
 			else
 				pPlayer->m_Score.reset();
@@ -292,39 +327,100 @@ void CGameControllerCup::CleanUp()
 
 void CGameControllerCup::EndRound()
 {
+	m_Warmup = -1;
 	RemoveEliminatedPlayers();
 
 	if(m_vPlayerLeaderboard.size() <= 1)
 	{
-		char aBuf[256];
-		m_CupState = STATE_NONE;
-
 		if(m_vPlayerLeaderboard.size() == 1)
 		{
+			char aBuf[256];
 			str_format(aBuf, sizeof(aBuf), "%s IS THE WINNER!!", m_vPlayerLeaderboard.front().m_aPlayerName);
 			GameServer()->SendBroadcast(aBuf, -1);
 		}
 		else
-		{
 			GameServer()->SendBroadcast("No one managed to qualify O.o", -1);
+
+		if (m_CupMode == MODE_LOOPCUP) //if loop
+		{
+			char aBuf[256];
+
+			//if enough players are there to start a new cup (3).
+			if (AmountOfActivePlayers() >= 3) {
+				str_format(aBuf, sizeof(aBuf), "New game is going to start in %i seconds. GetPrepared!", m_TimersInfo.m_Coundown);
+				GameServer()->SendChat(-1, TEAM_ALL, aBuf);
+				m_TimersInfo.m_Coundown = COUNTDOWN_LONG;
+				StartCup(m_TimersInfo.m_WarmupTimer);
+				return ;
+			}
+
+			GameServer()->SendBroadcast("At least 3 players are needed to start a new game. Going back to race mode", -1);
 		}
 
+		m_CupState = STATE_NONE;
+		m_CupMode = MODE_RACE;
 		CleanUp();
+		return ;
 	}
-	else
-		PrepareRound();
+	PrepareRound();
+}
+
+void CGameControllerCup::CupOnPlayerFinish(int ClientId)
+{
+	//TODO add team support.
+
+	const char *PlayerName = Server()->ClientName(ClientId);
+	auto Player = GetPlayerByName(PlayerName);
+
+	if(m_CupState == STATE_WARMUP && Player == m_vPlayerLeaderboard.end())
+	{
+		SPlayersRaceInfo PlayerInfo;
+		str_copy(PlayerInfo.m_aPlayerName, Server()->ClientName(ClientId));
+		m_vPlayerLeaderboard.emplace_back(PlayerInfo);
+	}
+
+	else if(m_CupState == STATE_ROUND && Player != m_vPlayerLeaderboard.end())
+	{
+		//this should never proc?
+		if(m_vPlayerLeaderboard.empty())
+		{
+			dbg_msg("COTW OnPlayerFinish", "ALARM no players?");
+			return;
+		}
+
+		if (m_vPlayerLeaderboard.size() == 2) //only if 2 players remaining
+			DoWarmup(END_ROUND_TIMER_SMALL);
+		else if(!m_vPlayerLeaderboard.front().m_HasFinished) //first player finishing
+			DoWarmup(END_ROUND_TIMER);
+
+		Player->m_HasFinished = true;
+		std::sort(m_vPlayerLeaderboard.begin(), m_vPlayerLeaderboard.end(), SplitsComparator);
+
+		//last player finishing
+		if(m_vPlayerLeaderboard.back().m_HasFinished)
+			EndRound();
+	}
+}
+
+int CGameControllerCup::AmountOfActivePlayers()
+{
+	int Amount = 0;
+	for(auto &aPlayer : m_aPlayers)
+		if(aPlayer.m_active)
+			Amount++;
+	return Amount;
 }
 
 auto CGameControllerCup::GetPlayerByName(const char *PlayerName)
 	-> decltype(m_vPlayerLeaderboard.begin())
 {
 	return std::find_if(m_vPlayerLeaderboard.begin(), m_vPlayerLeaderboard.end(),
-		[PlayerName](const SPlayersInfo &PlayerLeaderboard) {
+		[PlayerName](const SPlayersRaceInfo &PlayerLeaderboard) {
 			return !str_comp(PlayerName, PlayerLeaderboard.m_aPlayerName);
 		});
 }
 
-bool CGameControllerCup::SplitsComparator(const SPlayersInfo &Player1, SPlayersInfo &Player2)
+bool CGameControllerCup::SplitsComparator(const SPlayersRaceInfo &Player1, SPlayersRaceInfo &Player2)
 {
 	if(Player1.m_HasFinished != Player2.m_HasFinished)
 		return Player1.m_HasFinished;
@@ -361,52 +457,35 @@ void CGameControllerCup::SetSplits(CPlayer *pThisPlayer, int TimeCheckpoint)
 	}
 }
 
-void CGameControllerCup::CupOnPlayerFinish(int ClientId)
-{
-	//TODO add team support.
-
-	const char *PlayerName = Server()->ClientName(ClientId);
-	auto Player = GetPlayerByName(PlayerName);
-
-	if(m_CupState == STATE_WARMUP && Player == m_vPlayerLeaderboard.end())
-	{
-		SPlayersInfo PlayerInfo;
-		str_copy(PlayerInfo.m_aPlayerName, Server()->ClientName(ClientId));
-		m_vPlayerLeaderboard.emplace_back(PlayerInfo);
-	}
-
-	else if(m_CupState == STATE_ROUND && Player != m_vPlayerLeaderboard.end())
-	{
-		//this should never proc?
-		if(m_vPlayerLeaderboard.empty())
-		{
-			dbg_msg("COTW OnPlayerFinish", "ALARM no players?");
-			return;
-		}
-
-		//first player finishing
-		if(!m_vPlayerLeaderboard.front().m_HasFinished)
-			DoWarmup(END_ROUND_TIMER);
-
-		Player->m_HasFinished = true;
-		std::sort(m_vPlayerLeaderboard.begin(), m_vPlayerLeaderboard.end(), SplitsComparator);
-
-		//last player finishing
-		if(m_vPlayerLeaderboard.back().m_HasFinished)
-		{
-			m_Warmup = -1;
-			EndRound();
-		}
-	}
-}
-
 bool CGameControllerCup::CanJoinTeam(int Team, int NotThisId, char *pErrorReason, int ErrorReasonSize)
 {
-	if((m_CupState == STATE_ROUND || m_CupState == STATE_WARMUP_ROUND) && Team != TEAM_SPECTATORS)
+	if(m_CupState != STATE_WARMUP && Team != TEAM_SPECTATORS)
 	{
+		m_aPlayers[NotThisId].m_active = true;
+
 		if (pErrorReason)
 			str_copy(pErrorReason, "Cup has already started. You will be able to play once it ends", ErrorReasonSize);
 		return false;
+	}
+
+	if(Team == TEAM_SPECTATORS)
+	{
+		m_aPlayers[NotThisId].m_active = false;
+
+		if (m_CupMode != MODE_RACE && m_CupState != STATE_WARMUP) {
+			auto player = GetPlayerByName(Server()->ClientName(NotThisId));
+			if (player != m_vPlayerLeaderboard.end())
+				m_vPlayerLeaderboard.erase(player);
+
+			//if player rq'd
+			if (m_vPlayerLeaderboard.back().m_HasFinished)
+				EndRound();
+		}
+
+		if (pErrorReason)
+			str_copy(pErrorReason, "You are a spectator now\nYou won't join when a new round begins", ErrorReasonSize);
+
+		return true;
 	}
 
 	return IGameController::CanJoinTeam(Team, NotThisId, pErrorReason, ErrorReasonSize);
