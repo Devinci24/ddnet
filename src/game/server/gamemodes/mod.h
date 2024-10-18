@@ -6,41 +6,33 @@
 #include <vector>
 
 //MY TODOS:
-//finish round earlier when only 2 players left and 1 has finished. DONE
-//do some kind of loop via vote. So after Cup people can keep playing it. HALF DONE
-//maybe let people vote map change?
-// if ^ cancel every vote on real cup
+//let people vote map change. And vote change modes
 //make it so that at 6PM? 7? every day new map.
-//do spectator/alive/playing mode like furo?
-//State warmup and mode race share A LOT of similarities, made combine them or something
 
 class CGameControllerCup : public IGameController
 {
 private:
-	struct STimers
+	struct SCupInfo
 	{
+		//timers
 		int m_WarmupTimer;
 		int m_Coundown;
 		int m_EndRoundTimer; //unused
+
+		bool m_IsRealCup = true; //unused - should make it impossible to vote anything on real cup
+		bool m_IsLoop = false;	//make the event repeatable
 	};
-	STimers m_TimersInfo;
-	enum
-	{
-		MODE_REALCUP, //SHOULD make it unable to vote for anything
-		MODE_LOOPCUP,
-		MODE_RACE,
-	};
+	SCupInfo m_CupInfo;
 
 	//players stuff
 	struct SPlayersGameInfo
 	{
 		bool m_active = false;
-		int m_Score = 0;	//unused for now
+		int m_Score = 0;	//unused
 	};
 	SPlayersGameInfo m_aPlayers[MAX_CLIENTS];
 
 	int m_CupState;
-	int m_CupMode;
 
 	//start
 	void SendWarmupMsg();
@@ -66,6 +58,7 @@ public:
 		bool m_HasFinished = false;
 	};
 
+	//NONE and WARMUP share A LOT of similarities. could remove one with very few changes. Keeping it like this because it makes it feels a bit more clear.
 	enum
 	{
 		STATE_NONE,
