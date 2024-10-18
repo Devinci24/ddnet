@@ -225,7 +225,7 @@ void CGameControllerCup::OnPlayerConnect(CPlayer *pPlayer)
 	if(m_CupMode == MODE_RACE)
 		Score()->LoadPlayerData(ClientId);
 
-	if(m_CupState == STATE_ROUND || m_CupState == STATE_WARMUP_ROUND)
+	if(m_CupState != STATE_WARMUP && m_CupMode != MODE_RACE)
 	{
 		auto PlayerInfo = GetPlayerByName(Server()->ClientName(ClientId));
 		if(PlayerInfo == m_vPlayerLeaderboard.end())
@@ -459,7 +459,7 @@ void CGameControllerCup::SetSplits(CPlayer *pThisPlayer, int TimeCheckpoint)
 
 bool CGameControllerCup::CanJoinTeam(int Team, int NotThisId, char *pErrorReason, int ErrorReasonSize)
 {
-	if(m_CupState != STATE_WARMUP && Team != TEAM_SPECTATORS)
+	if(m_CupState != STATE_WARMUP && m_CupMode != MODE_RACE && Team != TEAM_SPECTATORS)
 	{
 		m_aPlayers[NotThisId].m_active = true;
 

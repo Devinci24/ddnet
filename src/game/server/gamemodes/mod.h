@@ -12,6 +12,7 @@
 // if ^ cancel every vote on real cup
 //make it so that at 6PM? 7? every day new map.
 //do spectator/alive/playing mode like furo?
+//State warmup and mode race share A LOT of similarities, made combine them or something
 
 class CGameControllerCup : public IGameController
 {
