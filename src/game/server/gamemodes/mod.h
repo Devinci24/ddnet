@@ -16,7 +16,7 @@ private:
 	{
 		//timers
 		int m_WarmupTimer;
-		int m_Coundown;
+		int m_Coundown; //kinda unused
 		int m_EndRoundTimer; //unused
 
 		bool m_IsRealCup = true; //unused - should make it impossible to vote anything on real cup

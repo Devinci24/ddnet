@@ -25,9 +25,9 @@
 #define TEST_TYPE_NAME "TestCup"
 #define WARMUP_TIME 900
 #define COUNTDOWN 3
-#define COUNTDOWN_LONG 10 // to make a small break in between games
 #define END_ROUND_TIMER 30
 #define END_ROUND_TIMER_SMALL 5 // used when only 2 players remaining.
+#define CUP_RESTART_TIMER 10
 #define ELIMINATED_TEAM TEAM_SPECTATORS //if this changes to actual team, will have to add SetForceCharacterTeam
 
 #include <unistd.h>
@@ -56,19 +56,14 @@ int CGameControllerCup::GetState() const
 void CGameControllerCup::SetCupMode(int Mode)
 {
 	switch(Mode) {
-		case 0: //maybe also clear playersInfo vector?
-			m_CupState = STATE_NONE;
+		case 0:
 			m_CupInfo.m_IsLoop = false;
-			m_Warmup = -1;
-
-			GameServer()->ResetTuning();
-			CleanUp();
 			break;
 		case 1:
-			m_CupInfo.m_WarmupTimer = 0;
 			m_CupInfo.m_IsLoop = true;
 
-			StartCup(m_CupInfo.m_WarmupTimer);
+			if (m_CupState == STATE_NONE)
+				StartCup(m_CupInfo.m_WarmupTimer);
 			break;
 	} //maybe do more modes?
 }
@@ -151,6 +146,7 @@ void CGameControllerCup::StartCup(int WarmupTime)
 		}
 	}
 	m_Warmup = 0;
+
 	str_copy(aBuf, "Cup has started!!! GOGOGOGOOO");
 	GameServer()->SendBroadcast(aBuf, -1);
 }
@@ -175,7 +171,11 @@ void CGameControllerCup::Tick()
 	Teams().ProcessSaveTeam();
 	Teams().Tick();
 
-	//warmup
+	//goes first so it can start the cup and prepare the round on the same frame
+	if(m_CupState == STATE_NONE && !m_Warmup)
+		StartCup(0);
+	
+	//game loop
 	if(m_CupState == STATE_WARMUP && m_Warmup)
 		SendWarmupMsg();
 	else if(m_CupState == STATE_WARMUP && !m_Warmup)
@@ -184,6 +184,7 @@ void CGameControllerCup::Tick()
 		StartRound();
 	else if(m_CupState == STATE_ROUND && !m_Warmup)
 		EndRound();
+
 	if(!m_Warmup)
 		m_Warmup = -1;
 }
@@ -285,14 +286,9 @@ void CGameControllerCup::CleanUp()
 			if(!pPlayer)
 				continue;
 
-			//put player into spec or not when in rounds.
-			if(m_CupState == STATE_WARMUP_ROUND) // (|| STATE_ROUND ) for convenience?
-			{
-				if(playerInfo == m_vPlayerLeaderboard.end() && pPlayer->GetTeam() != ELIMINATED_TEAM) //player is eliminated.
-					pPlayer->SetTeam(ELIMINATED_TEAM);
-				// else if(playerInfo != m_vPlayerLeaderboard.end() && pPlayer->GetTeam() == ELIMINATED_TEAM) //
-				// 	pPlayer->SetTeam(TEAM_FLOCK);
-			}
+			//put player into spec when in rounds.
+			if(m_CupState == STATE_WARMUP_ROUND && playerInfo == m_vPlayerLeaderboard.end() && pPlayer->GetTeam() != ELIMINATED_TEAM) // (STATE_WARMUP_ROUND || STATE_ROUND ) for convenience?
+				pPlayer->SetTeam(ELIMINATED_TEAM);
 
 			//Put Player into any playable team once cup ends.
 			if((m_CupState == STATE_NONE || m_CupState == STATE_WARMUP) && m_aPlayers[ClientId].m_active && pPlayer->GetTeam() == ELIMINATED_TEAM)
@@ -303,10 +299,8 @@ void CGameControllerCup::CleanUp()
 				Score()->LoadPlayerData(ClientId);
 			else
 				pPlayer->m_Score.reset();
-			
-			//pPlayer->Reset(); //maybe needed? Got a bug where I couldn't finish even when touching both start and finish. maybe this fix.
 
-			//maybe killing the player fixes it?
+			//maybe killing the player because otherwise weird bugs appear
 			if (pPlayer->GetTeam() == TEAM_FLOCK)
 			{
 				pPlayer->m_LastKill = Server()->Tick();
@@ -336,24 +330,31 @@ void CGameControllerCup::EndRound()
 			GameServer()->SendBroadcast("No one managed to qualify O.o", -1);
 
 		m_vPlayerLeaderboard.clear();
-		if (m_CupInfo.m_IsLoop) //if loop
+		m_CupState = STATE_NONE;
+
+		if (m_CupInfo.m_IsLoop)
 		{
 			char aBuf[256];
 
-			//if enough players are there to start a new cup (3).
-			if (AmountOfActivePlayers() >= 3) {
-				str_format(aBuf, sizeof(aBuf), "New game is going to start in %i seconds. GetPrepared!", m_CupInfo.m_Coundown);
-				GameServer()->SendChat(-1, TEAM_ALL, aBuf);
-				m_CupInfo.m_Coundown = COUNTDOWN_LONG;
-				StartCup(m_CupInfo.m_WarmupTimer);
-				return ;
+			//if enough players are there to start a new cup (2).
+			if (AmountOfActivePlayers() >= 2)
+			{
+				DoWarmup(CUP_RESTART_TIMER);
+				str_format(aBuf, sizeof(aBuf), "New game is going to start in %i seconds. Get Prepared!", CUP_RESTART_TIMER);
+			}
+			else
+			{
+				str_copy(aBuf, "At least 2 players are needed to start a new game. Going back to race mode");
+				m_CupInfo.m_IsLoop = false;
 			}
 
-			GameServer()->SendBroadcast("At least 3 players are needed to start a new game. Going back to race mode", -1);
+			GameServer()->SendChat(-1, TEAM_ALL, aBuf);
 		}
 
-		m_CupState = STATE_NONE;
-		CleanUp();
+		// cleanup if no game is starting soon
+		if (!m_CupInfo.m_IsLoop)
+			CleanUp();
+
 		return ;
 	}
 	PrepareRound();
@@ -453,13 +454,16 @@ void CGameControllerCup::SetSplits(CPlayer *pThisPlayer, int TimeCheckpoint)
 
 bool CGameControllerCup::CanJoinTeam(int Team, int NotThisId, char *pErrorReason, int ErrorReasonSize)
 {
-	if((m_CupState == STATE_WARMUP_ROUND || m_CupState == STATE_ROUND) && Team != TEAM_SPECTATORS)
+	if (Team != TEAM_SPECTATORS)
 	{
 		m_aPlayers[NotThisId].m_active = true;
 
-		if (pErrorReason)
-			str_copy(pErrorReason, "Cup has already started. You will be able to play once it ends", ErrorReasonSize);
-		return false;
+		if(m_CupState == STATE_WARMUP_ROUND || m_CupState == STATE_ROUND)
+		{
+			if (pErrorReason)
+				str_copy(pErrorReason, "Cup has already started. You will be able to play once it ends", ErrorReasonSize);
+			return false;
+		}
 	}
 
 	if(Team == TEAM_SPECTATORS)
