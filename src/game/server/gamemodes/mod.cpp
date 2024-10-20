@@ -55,7 +55,7 @@ void CGameControllerCup::AddVotes() const
 {
 	//GameServer()->Console()->ExecuteLine("clean_votes");
 	GameServer()->AddVote("Restart Cup", "COTW_Restart 0");
-	GameServer()->AddVote(" ", "");
+	GameServer()->AddVote(" ", "info");
 	GameServer()->AddVote("endless cup On (requires at least 2 players)", "COTW_mode 1");
 	GameServer()->AddVote("endless cup Off (race mode)", "COTW_mode 0");
 }
@@ -74,7 +74,7 @@ void CGameControllerCup::SetCupMode(int Mode)
 		case 1:
 			m_CupInfo.m_IsLoop = true;
 
-			if (m_CupState == STATE_NONE && m_CupInfo.m_IsLoop == false && AmountOfActivePlayers() >= 2)
+			if (m_CupState == STATE_NONE && AmountOfActivePlayers() >= 2)
 				StartCup(m_CupInfo.m_WarmupTimer);
 			break;
 	} //maybe do more modes?
