@@ -2,6 +2,7 @@
 #include "mod.h"
 #include "base/system.h"
 #include "engine/server.h"
+#include "game/client/components/console.h"
 #include "game/generated/protocol.h"
 #include "game/generated/protocol7.h"
 #include "game/server/teams.h"
@@ -43,10 +44,21 @@ CGameControllerCup::CGameControllerCup(class CGameContext *pGameServer) :
 	m_CupInfo.m_Coundown = COUNTDOWN;
 	m_CupInfo.m_EndRoundTimer = END_ROUND_TIMER; //unused
 
+	m_CupInfo.m_IsRealCup = true;
+
 	StartCup(WARMUP_TIME);
 }
 
 CGameControllerCup::~CGameControllerCup() = default;
+
+void CGameControllerCup::AddVotes() const
+{
+	//GameServer()->Console()->ExecuteLine("clean_votes");
+	GameServer()->AddVote("Restart Cup", "COTW_Restart 0");
+	GameServer()->AddVote(" ", "");
+	GameServer()->AddVote("endless cup On (requires at least 2 players)", "COTW_mode 1");
+	GameServer()->AddVote("endless cup Off (race mode)", "COTW_mode 0");
+}
 
 int CGameControllerCup::GetState() const
 {
@@ -62,7 +74,7 @@ void CGameControllerCup::SetCupMode(int Mode)
 		case 1:
 			m_CupInfo.m_IsLoop = true;
 
-			if (m_CupState == STATE_NONE)
+			if (m_CupState == STATE_NONE && m_CupInfo.m_IsLoop == false && AmountOfActivePlayers() >= 2)
 				StartCup(m_CupInfo.m_WarmupTimer);
 			break;
 	} //maybe do more modes?
@@ -116,6 +128,11 @@ void CGameControllerCup::StartRound()
 
 void CGameControllerCup::StartCup(int WarmupTime)
 {
+	//don't add votes at "first/official" cup.
+	if (!m_CupInfo.m_IsRealCup)
+		AddVotes();
+	m_CupInfo.m_IsRealCup = false;
+
 	m_CupState = STATE_WARMUP;
 
 	m_RoundStartTick = 0;

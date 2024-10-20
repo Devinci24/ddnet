@@ -146,7 +146,6 @@ class CGameContext : public IGameServer
 
 	void Construct(int Resetting);
 	void Destruct(int Resetting);
-	void AddVote(const char *pDescription, const char *pCommand);
 	static int MapScan(const char *pName, int IsDir, int DirType, void *pUserData);
 
 	struct CPersistentData
@@ -208,6 +207,8 @@ public:
 	void SendVoteSet(int ClientId);
 	void SendVoteStatus(int ClientId, int Total, int Yes, int No);
 	void AbortVoteKickOnDisconnect(int ClientId);
+	//my changes, made this public:
+	void AddVote(const char *pDescription, const char *pCommand);
 
 	int m_VoteCreator;
 	int m_VoteType;

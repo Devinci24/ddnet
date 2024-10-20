@@ -49,6 +49,9 @@ private:
 	void CupOnPlayerFinish(int ClientId);
 	void CleanUp();
 
+	//others
+	void AddVotes() const;
+
 public:
 	struct SPlayersRaceInfo
 	{
