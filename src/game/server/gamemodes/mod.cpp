@@ -295,7 +295,11 @@ void CGameControllerCup::RemoveEliminatedPlayers()
 
 	//remove player if they haven't finished
 	while(!m_vPlayerLeaderboard.back().m_HasFinished && !m_vPlayerLeaderboard.empty())
+	{
+		str_format(aBuf, sizeof(aBuf), "%s has been eliminated\n", m_vPlayerLeaderboard.back().m_aPlayerName);
+		GameServer()->SendChat(-1, TEAM_ALL, aBuf);
 		m_vPlayerLeaderboard.pop_back();
+	}
 }
 
 //needs a better name
