@@ -2813,6 +2813,17 @@ void CGameContext::OnKillNetMessage(const CNetMsg_Cl_Kill *pMsg, int ClientId)
 		return;
 	}
 
+	//my changes
+	CGameControllerCup *Cup = dynamic_cast<CGameControllerCup *>(m_pController);
+	if(Cup && Cup->GetState() == CGameControllerCup::STATE_ROUND)
+	{
+		auto PlayerInfo = Cup->GetPlayerByName(Server()->ClientName(ClientId));
+		std::fill_n(PlayerInfo->m_aCurrentTimeCps, MAX_CHECKPOINTS, 0.0f);
+		PlayerInfo->m_AmountOfTimeCPs = 0;
+		
+		std::sort(Cup->m_vPlayerLeaderboard.begin(), Cup->m_vPlayerLeaderboard.end(), CGameControllerCup::SplitsComparator); //this sort only used if I ever connect my leaderboard to it
+	}
+
 	pPlayer->m_LastKill = Server()->Tick();
 	pPlayer->KillCharacter(WEAPON_SELF);
 	pPlayer->Respawn();

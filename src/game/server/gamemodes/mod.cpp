@@ -73,6 +73,7 @@ void CGameControllerCup::SetCupMode(int Mode)
 			break;
 		case 1:
 			m_CupInfo.m_IsLoop = true;
+			m_CupInfo.m_WarmupTimer = 0;
 
 			if (m_CupState == STATE_NONE && AmountOfActivePlayers() >= 2)
 				StartCup(m_CupInfo.m_WarmupTimer);
@@ -89,6 +90,12 @@ void CGameControllerCup::PausePlayersTune()
 	GameServer()->Tuning()->Set("air_jump_impulse", 0);
 	GameServer()->Tuning()->Set("gravity", 0);
 	GameServer()->Tuning()->Set("player_collision", 0);
+
+	//weapons
+	GameServer()->Tuning()->Set("jetpack_strength", 0);
+	GameServer()->Tuning()->Set("shotgun_strength", 0);
+	GameServer()->Tuning()->Set("explosion_strength", 0);
+
 	GameServer()->SendTuningParams(-1);
 }
 
